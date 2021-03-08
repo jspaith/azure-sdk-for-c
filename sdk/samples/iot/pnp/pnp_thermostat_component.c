@@ -7,7 +7,9 @@
 #pragma warning(disable : 4996)
 #endif
 
-#include <azure/iot/az_iot_pnp_client.h>
+#include <azure/iot/az_iot_hub_client.h>
+#include <azure/iot/az_iot_property_format.h>
+
 #include <iot_sample_common.h>
 
 #include "pnp_mqtt_message.h"
@@ -194,7 +196,7 @@ void pnp_thermostat_build_telemetry_message(
 }
 
 void pnp_thermostat_build_maximum_temperature_reported_property(
-    az_iot_pnp_client const* pnp_client,
+    az_iot_hub_client const* hub_client,
     pnp_thermostat_component* thermostat_component,
     az_span payload,
     az_span* out_payload,
@@ -209,8 +211,8 @@ void pnp_thermostat_build_maximum_temperature_reported_property(
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_init(&jw, payload, NULL), log);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_begin_object(&jw), log);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-      az_iot_pnp_client_property_builder_begin_component(
-          pnp_client, &jw, thermostat_component->component_name),
+      az_iot_hub_client_property_builder_begin_component(
+          hub_client, &jw, thermostat_component->component_name),
       log);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(
       az_json_writer_append_property_name(&jw, property_reported_maximum_temperature_property_name),
@@ -220,14 +222,14 @@ void pnp_thermostat_build_maximum_temperature_reported_property(
           &jw, thermostat_component->current_temperature, DOUBLE_DECIMAL_PLACE_DIGITS),
       log);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-      az_iot_pnp_client_property_builder_end_component(pnp_client, &jw), log);
+      az_iot_hub_client_property_builder_end_component(hub_client, &jw), log);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_end_object(&jw), log);
 
   *out_payload = az_json_writer_get_bytes_used_in_destination(&jw);
 }
 
 az_result pnp_thermostat_process_property_update(
-    az_iot_pnp_client const* pnp_client,
+    az_iot_hub_client const* hub_client,
     pnp_thermostat_component* ref_thermostat_component,
     az_json_reader* property_name_and_value,
     int32_t version,
@@ -289,12 +291,12 @@ az_result pnp_thermostat_process_property_update(
 
     IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_begin_object(&jw), property_log);
     IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-        az_iot_pnp_client_property_builder_begin_component(
-            pnp_client, &jw, ref_thermostat_component->component_name),
+        az_iot_hub_client_property_builder_begin_component(
+            hub_client, &jw, ref_thermostat_component->component_name),
         property_log);
     IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-        az_iot_pnp_client_property_builder_begin_reported_status(
-            pnp_client,
+        az_iot_hub_client_property_builder_begin_reported_status(
+            hub_client,
             &jw,
             property_name_span,
             (int32_t)AZ_IOT_STATUS_OK,
@@ -305,9 +307,9 @@ az_result pnp_thermostat_process_property_update(
         az_json_writer_append_double(&jw, parsed_property_value, DOUBLE_DECIMAL_PLACE_DIGITS),
         property_log);
     IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-        az_iot_pnp_client_property_builder_end_reported_status(pnp_client, &jw), property_log);
+        az_iot_hub_client_property_builder_end_reported_status(hub_client, &jw), property_log);
     IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-        az_iot_pnp_client_property_builder_end_component(pnp_client, &jw), property_log);
+        az_iot_hub_client_property_builder_end_component(hub_client, &jw), property_log);
 
     IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_end_object(&jw), property_log);
 

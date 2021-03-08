@@ -30,7 +30,7 @@
 #include <azure/core/az_json.h>
 #include <azure/core/az_result.h>
 #include <azure/core/az_span.h>
-#include <azure/iot/az_iot_pnp_client.h>
+#include <azure/iot/az_iot_property_format.h>
 
 #include "iot_sample_common.h"
 #include "pnp/pnp_device_info_component.h"
@@ -79,7 +79,7 @@ static az_span const command_empty_response_payload = AZ_SPAN_LITERAL_FROM_STR("
 static az_span const telemetry_working_set_name = AZ_SPAN_LITERAL_FROM_STR("workingSet");
 
 static iot_sample_environment_variables env_vars;
-static az_iot_pnp_client pnp_client;
+static az_iot_hub_client hub_client;
 static MQTTClient mqtt_client;
 static char mqtt_client_username_buffer[512];
 static pnp_mqtt_message publish_message;
@@ -108,10 +108,10 @@ static void on_message_received(
 // Device property, command request, telemetry functions
 static void handle_device_property_message(
     MQTTClient_message const* receive_message,
-    az_iot_pnp_client_property_response const* property_response);
+    az_iot_hub_client_property_response const* property_response);
 static void handle_command_request(
     MQTTClient_message const* receive_message,
-    az_iot_pnp_client_command_request const* command_request);
+    az_iot_hub_client_command_request const* command_request);
 static void send_telemetry_messages(void);
 
 // Temperature controller functions
@@ -309,19 +309,20 @@ static void create_and_configure_mqtt_client(void)
       SAMPLE_TYPE, env_vars.hub_hostname, mqtt_endpoint_buffer, sizeof(mqtt_endpoint_buffer));
 
   // Initialize the pnp client with the connection options.
-  az_iot_pnp_client_options options = az_iot_pnp_client_options_default();
+  az_iot_hub_client_options options = az_iot_hub_client_options_default();
+  options.model_id = model_id;
   options.component_names = pnp_device_components;
   options.component_names_length = pnp_components_length;
 
-  int rc = az_iot_pnp_client_init(
-      &pnp_client, env_vars.hub_hostname, env_vars.hub_device_id, model_id, &options);
+  int rc = az_iot_hub_client_init(
+      &hub_client, env_vars.hub_hostname, env_vars.hub_device_id, &options);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Failed to initialize pnp client");
 
   // Get the MQTT client id used for the MQTT connection.
   char mqtt_client_id_buffer[128];
 
-  rc = az_iot_pnp_client_get_client_id(
-      &pnp_client, mqtt_client_id_buffer, sizeof(mqtt_client_id_buffer), NULL);
+  rc = az_iot_hub_client_get_client_id(
+      &hub_client, mqtt_client_id_buffer, sizeof(mqtt_client_id_buffer), NULL);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Failed to get MQTT client id");
 
   // Create the Paho MQTT client.
@@ -337,8 +338,8 @@ static void create_and_configure_mqtt_client(void)
 static void connect_mqtt_client_to_iot_hub(void)
 {
   // Get the MQTT client username.
-  az_result rc = az_iot_pnp_client_get_user_name(
-      &pnp_client, mqtt_client_username_buffer, sizeof(mqtt_client_username_buffer), NULL);
+  az_result rc = az_iot_hub_client_get_user_name(
+      &hub_client, mqtt_client_username_buffer, sizeof(mqtt_client_username_buffer), NULL);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Failed to get MQTT client username");
 
   // Set MQTT connection options.
@@ -419,8 +420,8 @@ static void initialize_components(void)
 static void send_device_info(void)
 {
   // Get the property PATCH topic to send a reported property update.
-  az_result rc = az_iot_pnp_client_property_patch_get_publish_topic(
-      &pnp_client,
+  az_result rc = az_iot_hub_client_property_patch_get_publish_topic(
+      &hub_client,
       pnp_mqtt_get_request_id(),
       publish_message.topic,
       publish_message.topic_length,
@@ -441,8 +442,8 @@ static void send_device_info(void)
 static void send_serial_number(void)
 {
   // Get the property PATCH topic to send a reported property update.
-  az_result rc = az_iot_pnp_client_property_patch_get_publish_topic(
-      &pnp_client,
+  az_result rc = az_iot_hub_client_property_patch_get_publish_topic(
+      &hub_client,
       pnp_mqtt_get_request_id(),
       publish_message.topic,
       publish_message.topic_length,
@@ -469,8 +470,8 @@ static void request_all_properties(void)
   IOT_SAMPLE_LOG("Client requesting device property document from service.");
 
   // Get the property document topic to publish the property document request.
-  az_result rc = az_iot_pnp_client_property_document_get_publish_topic(
-      &pnp_client,
+  az_result rc = az_iot_hub_client_property_document_get_publish_topic(
+      &hub_client,
       pnp_mqtt_get_request_id(),
       publish_message.topic,
       publish_message.topic_length,
@@ -492,8 +493,8 @@ static void receive_messages(void)
     if (thermostat_1.send_maximum_temperature_property)
     {
       // Get the property PATCH topic to send a reported property update.
-      rc = az_iot_pnp_client_property_patch_get_publish_topic(
-          &pnp_client,
+      rc = az_iot_hub_client_property_patch_get_publish_topic(
+          &hub_client,
           pnp_mqtt_get_request_id(),
           publish_message.topic,
           publish_message.topic_length,
@@ -503,7 +504,7 @@ static void receive_messages(void)
       // Build the maximum temperature reported property message.
       az_span property_name;
       pnp_thermostat_build_maximum_temperature_reported_property(
-          &pnp_client,
+          &hub_client,
           &thermostat_1,
           publish_message.payload,
           &publish_message.out_payload,
@@ -525,8 +526,8 @@ static void receive_messages(void)
     if (thermostat_2.send_maximum_temperature_property)
     {
       // Get the property PATCH topic to send a reported property update.
-      rc = az_iot_pnp_client_property_patch_get_publish_topic(
-          &pnp_client,
+      rc = az_iot_hub_client_property_patch_get_publish_topic(
+          &hub_client,
           pnp_mqtt_get_request_id(),
           publish_message.topic,
           publish_message.topic_length,
@@ -536,7 +537,7 @@ static void receive_messages(void)
       // Build the maximum temperature reported property message.
       az_span property_name;
       pnp_thermostat_build_maximum_temperature_reported_property(
-          &pnp_client,
+          &hub_client,
           &thermostat_2,
           publish_message.payload,
           &publish_message.out_payload,
@@ -649,11 +650,11 @@ static void on_message_received(
   az_span const message_span
       = az_span_create((uint8_t*)receive_message->payload, receive_message->payloadlen);
 
-  az_iot_pnp_client_property_response property_response;
-  az_iot_pnp_client_command_request command_request;
+  az_iot_hub_client_property_response property_response;
+  az_iot_hub_client_command_request command_request;
 
   // Parse the incoming message topic and handle appropriately.
-  rc = az_iot_pnp_client_property_parse_received_topic(&pnp_client, topic_span, &property_response);
+  rc = az_iot_hub_client_property_parse_received_topic(&hub_client, topic_span, &property_response);
   if (az_result_succeeded(rc))
   {
     IOT_SAMPLE_LOG_SUCCESS("Client received a valid property topic response.");
@@ -665,7 +666,7 @@ static void on_message_received(
   }
   else
   {
-    rc = az_iot_pnp_client_commands_parse_received_topic(&pnp_client, topic_span, &command_request);
+    rc = az_iot_hub_client_commands_parse_received_topic(&hub_client, topic_span, &command_request);
     if (az_result_succeeded(rc))
     {
       IOT_SAMPLE_LOG_SUCCESS("Client received a valid command topic response.");
@@ -685,10 +686,10 @@ static void on_message_received(
 
 static void process_property_message(
     az_span property_message_span,
-    az_iot_pnp_client_property_response_type response_type)
+    az_iot_hub_client_property_response_type response_type)
 {
-  az_result rc = az_iot_pnp_client_property_patch_get_publish_topic(
-      &pnp_client,
+  az_result rc = az_iot_hub_client_property_patch_get_publish_topic(
+      &hub_client,
       pnp_mqtt_get_request_id(),
       publish_message.topic,
       publish_message.topic_length,
@@ -701,22 +702,22 @@ static void process_property_message(
   rc = az_json_reader_init(&jr, property_message_span, NULL);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Could not initialize the json reader");
 
-  rc = az_iot_pnp_client_property_get_property_version(&pnp_client, &jr, response_type, &version);
+  rc = az_iot_hub_client_property_get_property_version(&hub_client, &jr, response_type, &version);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Could not get the property version");
 
   rc = az_json_reader_init(&jr, property_message_span, NULL);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Could not initialize the json reader");
 
   while (az_result_succeeded(
-      rc = az_iot_pnp_client_property_get_next_component_property(
-          &pnp_client, &jr, response_type, &component_name)))
+      rc = az_iot_hub_client_property_get_next_component_property(
+          &hub_client, &jr, response_type, &component_name)))
   {
     if (rc == AZ_OK)
     {
       if (az_span_is_content_equal(component_name, thermostat_1_name))
       {
         rc = pnp_thermostat_process_property_update(
-            &pnp_client,
+            &hub_client,
             &thermostat_1,
             &jr,
             version,
@@ -734,7 +735,7 @@ static void process_property_message(
       else if (az_span_is_content_equal(component_name, thermostat_2_name))
       {
         rc = pnp_thermostat_process_property_update(
-            &pnp_client,
+            &hub_client,
             &thermostat_2,
             &jr,
             version,
@@ -758,8 +759,8 @@ static void process_property_message(
             az_span_ptr(jr.token.slice));
 
         // Get the property PATCH topic to send a reported property update.
-        rc = az_iot_pnp_client_property_patch_get_publish_topic(
-            &pnp_client,
+        rc = az_iot_hub_client_property_patch_get_publish_topic(
+            &hub_client,
             pnp_mqtt_get_request_id(),
             publish_message.topic,
             publish_message.topic_length,
@@ -778,13 +779,13 @@ static void process_property_message(
         if (az_span_size(component_name) > 0)
         {
           IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-              az_iot_pnp_client_property_builder_begin_component(&pnp_client, &jw, component_name),
+              az_iot_hub_client_property_builder_begin_component(&hub_client, &jw, component_name),
               "Could not begin the property component");
         }
 
         IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-            az_iot_pnp_client_property_builder_begin_reported_status(
-                &pnp_client,
+            az_iot_hub_client_property_builder_begin_reported_status(
+                &hub_client,
                 &jw,
                 jr.token.slice,
                 AZ_IOT_STATUS_NOT_FOUND,
@@ -799,13 +800,13 @@ static void process_property_message(
             append_simple_json_token(&jw, &jr.token), "Could not append the property");
 
         IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-            az_iot_pnp_client_property_builder_end_reported_status(&pnp_client, &jw),
+            az_iot_hub_client_property_builder_end_reported_status(&hub_client, &jw),
             "Could not end the property with status");
 
         if (az_span_size(component_name) > 0)
         {
           IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-              az_iot_pnp_client_property_builder_end_component(&pnp_client, &jw),
+              az_iot_hub_client_property_builder_end_component(&hub_client, &jw),
               "Could not end the property component");
         }
 
@@ -836,7 +837,7 @@ static void process_property_message(
 
 static void handle_device_property_message(
     MQTTClient_message const* receive_message,
-    az_iot_pnp_client_property_response const* property_response)
+    az_iot_hub_client_property_response const* property_response)
 {
   az_span const message_span
       = az_span_create((uint8_t*)receive_message->payload, receive_message->payloadlen);
@@ -845,20 +846,20 @@ static void handle_device_property_message(
   switch (property_response->response_type)
   {
     // A response from a property GET publish message with the property document as a payload.
-    case AZ_IOT_PNP_CLIENT_PROPERTY_RESPONSE_TYPE_GET:
+    case AZ_IOT_HUB_CLIENT_PROPERTY_RESPONSE_TYPE_GET:
       IOT_SAMPLE_LOG("Message Type: GET");
       (void)process_property_message(message_span, property_response->response_type);
       break;
 
     // An update to the desired properties with the properties as a payload.
-    case AZ_IOT_PNP_CLIENT_PROPERTY_RESPONSE_TYPE_DESIRED_PROPERTIES:
+    case AZ_IOT_HUB_CLIENT_PROPERTY_RESPONSE_TYPE_DESIRED_PROPERTIES:
       IOT_SAMPLE_LOG("Message Type: Desired Properties");
       (void)process_property_message(message_span, property_response->response_type);
 
       break;
 
     // A response from a property reported properties publish message.
-    case AZ_IOT_PNP_CLIENT_PROPERTY_RESPONSE_TYPE_REPORTED_PROPERTIES:
+    case AZ_IOT_HUB_CLIENT_PROPERTY_RESPONSE_TYPE_REPORTED_PROPERTIES:
       IOT_SAMPLE_LOG("Message Type: Reported Properties");
       break;
   }
@@ -866,7 +867,7 @@ static void handle_device_property_message(
 
 static void handle_command_request(
     MQTTClient_message const* receive_message,
-    az_iot_pnp_client_command_request const* command_request)
+    az_iot_hub_client_command_request const* command_request)
 {
   az_span const message_span
       = az_span_create((uint8_t*)receive_message->payload, receive_message->payloadlen);
@@ -922,8 +923,8 @@ static void handle_command_request(
   }
 
   // Get the commands response topic to publish the command response.
-  az_result rc = az_iot_pnp_client_commands_response_get_publish_topic(
-      &pnp_client,
+  az_result rc = az_iot_hub_client_commands_response_get_publish_topic(
+      &hub_client,
       command_request->request_id,
       (uint16_t)status,
       publish_message.topic,
@@ -943,8 +944,8 @@ static void send_telemetry_messages(void)
 {
   // Temperature Sensor 1
   // Get the telemetry topic to publish the telemetry message.
-  az_result rc = az_iot_pnp_client_telemetry_get_publish_topic(
-      &pnp_client,
+  az_result rc = az_iot_client_telemetry_with_component_get_publish_topic(
+      &hub_client,
       thermostat_1.component_name,
       NULL,
       publish_message.topic,
@@ -964,8 +965,8 @@ static void send_telemetry_messages(void)
 
   // Temperature Sensor 2
   // Get the telemetry topic to publish the telemetry message.
-  rc = az_iot_pnp_client_telemetry_get_publish_topic(
-      &pnp_client,
+  rc = az_iot_client_telemetry_with_component_get_publish_topic(
+      &hub_client,
       thermostat_2.component_name,
       NULL,
       publish_message.topic,
@@ -985,8 +986,8 @@ static void send_telemetry_messages(void)
 
   // Temperature Controller
   // Get the telemetry topic to publish the telemetry message.
-  rc = az_iot_pnp_client_telemetry_get_publish_topic(
-      &pnp_client, AZ_SPAN_EMPTY, NULL, publish_message.topic, publish_message.topic_length, NULL);
+  rc = az_iot_client_telemetry_with_component_get_publish_topic(
+      &hub_client, AZ_SPAN_EMPTY, NULL, publish_message.topic, publish_message.topic_length, NULL);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Failed to get the telemetry topic");
 
   // Build the telemetry message.

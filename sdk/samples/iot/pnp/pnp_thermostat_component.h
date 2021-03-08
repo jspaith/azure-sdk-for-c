@@ -56,14 +56,14 @@ void pnp_thermostat_build_telemetry_message(
 /**
  * @brief Build the thermostat's maximum temperature reported property message.
  *
- * @param[in] pnp_client The #az_iot_pnp_client to use for this call.
+ * @param[in] pnp_client The #az_iot_hub_client to use for this call.
  * @param[in] thermostat_component A pointer to the themostat component to get data.
  * @param[in] payload An #az_span with sufficient capacity to hold the json payload.
  * @param[out] out_payload A pointer to the #az_span containing the output json payload.
  * @param[out] out_property_name The name of the reported property to be sent.
  */
 void pnp_thermostat_build_maximum_temperature_reported_property(
-    az_iot_pnp_client const* pnp_client,
+    az_iot_hub_client const* pnp_client,
     pnp_thermostat_component* thermostat_component,
     az_span payload,
     az_span* out_payload,
@@ -72,7 +72,7 @@ void pnp_thermostat_build_maximum_temperature_reported_property(
 /**
  * @brief Build the thermostat's error message with status.
  *
- * @param[in] pnp_client The #az_iot_pnp_client to use for this call.
+ * @param[in] pnp_client The #az_iot_hub_client to use for this call.
  * @param[in] component_name The name of the component for the reported property.
  * @param[in] property_name The name of the property for which to send an update.
  * @param[in] property_value The property value to be appended.
@@ -82,7 +82,7 @@ void pnp_thermostat_build_maximum_temperature_reported_property(
  * @param[out] out_payload A pointer to the #az_span containing the output json payload.
  */
 void pnp_thermostat_build_error_reported_property_with_status(
-    az_iot_pnp_client const* pnp_client,
+    az_iot_hub_client const* pnp_client,
     az_span component_name,
     az_span property_name,
     az_json_reader* property_value,
@@ -94,7 +94,7 @@ void pnp_thermostat_build_error_reported_property_with_status(
 /**
  * @brief Update the thermostat's member variables and prepare reported property message.
  *
- * @param[in] pnp_client The #az_iot_pnp_client to use for this call.
+ * @param[in] pnp_client The #az_iot_hub_client to use for this call.
  * @param[in,out] ref_thermostat_component A pointer to the themostat component to update data.
  * @param[in] property_name_and_value The #az_json_reader pointing to the property name.
  * @param[in] version The version parsed from the received message, and used to prepare the returned
@@ -108,7 +108,7 @@ void pnp_thermostat_build_error_reported_property_with_status(
  * @retval True if property updated. False if property does not belong to thermostat component.
  */
 az_result pnp_thermostat_process_property_update(
-    az_iot_pnp_client const* pnp_client,
+    az_iot_hub_client const* pnp_client,
     pnp_thermostat_component* ref_thermostat_component,
     az_json_reader* property_name_and_value,
     int32_t version,
