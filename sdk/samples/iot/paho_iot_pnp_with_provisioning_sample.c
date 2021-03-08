@@ -657,7 +657,7 @@ static void connect_mqtt_client_to_iot_hub(void)
 static void subscribe_mqtt_client_to_iot_hub_topics(void)
 {
   // Messages received on the command topic will be commands to be invoked.
-  int rc = MQTTClient_subscribe(mqtt_client, AZ_IOT_PNP_CLIENT_COMMANDS_SUBSCRIBE_TOPIC, 1);
+  int rc = MQTTClient_subscribe(mqtt_client, AZ_IOT_HUB_CLIENT_METHODS_SUBSCRIBE_TOPIC, 1);
   if (rc != MQTTCLIENT_SUCCESS)
   {
     IOT_SAMPLE_LOG_ERROR(
@@ -666,7 +666,7 @@ static void subscribe_mqtt_client_to_iot_hub_topics(void)
   }
 
   // Messages received on the property PATCH topic will be updates to the desired properties.
-  rc = MQTTClient_subscribe(mqtt_client, AZ_IOT_PNP_CLIENT_PROPERTY_PATCH_SUBSCRIBE_TOPIC, 1);
+  rc = MQTTClient_subscribe(mqtt_client, AZ_IOT_HUB_CLIENT_PROPERTY_PATCH_SUBSCRIBE_TOPIC, 1);
   if (rc != MQTTCLIENT_SUCCESS)
   {
     IOT_SAMPLE_LOG_ERROR(
@@ -675,7 +675,7 @@ static void subscribe_mqtt_client_to_iot_hub_topics(void)
   }
 
   // Messages received on property response topic will be response statuses from the server.
-  rc = MQTTClient_subscribe(mqtt_client, AZ_IOT_PNP_CLIENT_PROPERTY_RESPONSE_SUBSCRIBE_TOPIC, 1);
+  rc = MQTTClient_subscribe(mqtt_client, AZ_IOT_HUB_CLIENT_PROPERTY_RESPONSE_SUBSCRIBE_TOPIC, 1);
   if (rc != MQTTCLIENT_SUCCESS)
   {
     IOT_SAMPLE_LOG_ERROR(

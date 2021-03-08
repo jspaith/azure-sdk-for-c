@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-#include <azure/iot/az_iot_pnp_client.h>
+#include <azure/iot/az_iot_property_format.h>
 
 #include <azure/core/internal/az_precondition_internal.h>
 #include <azure/core/internal/az_result_internal.h>
@@ -12,63 +12,13 @@ static const az_span property_response_value_name = AZ_SPAN_LITERAL_FROM_STR("va
 static const az_span property_ack_code_name = AZ_SPAN_LITERAL_FROM_STR("ac");
 static const az_span property_ack_version_name = AZ_SPAN_LITERAL_FROM_STR("av");
 static const az_span property_ack_description_name = AZ_SPAN_LITERAL_FROM_STR("ad");
+
 static const az_span component_property_label_name = AZ_SPAN_LITERAL_FROM_STR("__t");
 static const az_span component_property_label_value = AZ_SPAN_LITERAL_FROM_STR("c");
 
-AZ_NODISCARD az_result az_iot_pnp_client_property_patch_get_publish_topic(
-    az_iot_pnp_client const* client,
-    az_span request_id,
-    char* mqtt_topic,
-    size_t mqtt_topic_size,
-    size_t* out_mqtt_topic_length)
-{
-  return az_iot_hub_client_twin_patch_get_publish_topic(
-      &(client->_internal.iot_hub_client),
-      request_id,
-      mqtt_topic,
-      mqtt_topic_size,
-      out_mqtt_topic_length);
-}
 
-AZ_NODISCARD az_result az_iot_pnp_client_property_document_get_publish_topic(
-    az_iot_pnp_client const* client,
-    az_span request_id,
-    char* mqtt_topic,
-    size_t mqtt_topic_size,
-    size_t* out_mqtt_topic_length)
-{
-  return az_iot_hub_client_twin_document_get_publish_topic(
-      &(client->_internal.iot_hub_client),
-      request_id,
-      mqtt_topic,
-      mqtt_topic_size,
-      out_mqtt_topic_length);
-}
-
-AZ_NODISCARD az_result az_iot_pnp_client_property_parse_received_topic(
-    az_iot_pnp_client const* client,
-    az_span received_topic,
-    az_iot_pnp_client_property_response* out_response)
-{
-  _az_PRECONDITION_NOT_NULL(client);
-  _az_PRECONDITION_VALID_SPAN(received_topic, 1, false);
-  _az_PRECONDITION_NOT_NULL(out_response);
-
-  az_iot_hub_client_twin_response hub_twin_response;
-  _az_RETURN_IF_FAILED(az_iot_hub_client_twin_parse_received_topic(
-      &client->_internal.iot_hub_client, received_topic, &hub_twin_response));
-
-  out_response->request_id = hub_twin_response.request_id;
-  out_response->response_type
-      = (az_iot_pnp_client_property_response_type)hub_twin_response.response_type;
-  out_response->status = hub_twin_response.status;
-  out_response->version = hub_twin_response.version;
-
-  return AZ_OK;
-}
-
-AZ_NODISCARD az_result az_iot_pnp_client_property_builder_begin_component(
-    az_iot_pnp_client const* client,
+AZ_NODISCARD az_result az_iot_hub_client_property_builder_begin_component(
+    az_iot_hub_client const* client,
     az_json_writer* ref_json_writer,
     az_span component_name)
 {
@@ -88,8 +38,8 @@ AZ_NODISCARD az_result az_iot_pnp_client_property_builder_begin_component(
   return AZ_OK;
 }
 
-AZ_NODISCARD az_result az_iot_pnp_client_property_builder_end_component(
-    az_iot_pnp_client const* client,
+AZ_NODISCARD az_result az_iot_hub_client_property_builder_end_component(
+    az_iot_hub_client const* client,
     az_json_writer* ref_json_writer)
 {
   _az_PRECONDITION_NOT_NULL(client);
@@ -100,8 +50,8 @@ AZ_NODISCARD az_result az_iot_pnp_client_property_builder_end_component(
   return az_json_writer_append_end_object(ref_json_writer);
 }
 
-AZ_NODISCARD az_result az_iot_pnp_client_property_builder_begin_reported_status(
-    az_iot_pnp_client const* client,
+AZ_NODISCARD az_result az_iot_hub_client_property_builder_begin_reported_status(
+    az_iot_hub_client const* client,
     az_json_writer* ref_json_writer,
     az_span property_name,
     int32_t ack_code,
@@ -136,8 +86,8 @@ AZ_NODISCARD az_result az_iot_pnp_client_property_builder_begin_reported_status(
   return AZ_OK;
 }
 
-AZ_NODISCARD az_result az_iot_pnp_client_property_builder_end_reported_status(
-    az_iot_pnp_client const* client,
+AZ_NODISCARD az_result az_iot_hub_client_property_builder_end_reported_status(
+    az_iot_hub_client const* client,
     az_json_writer* ref_json_writer)
 {
   _az_PRECONDITION_NOT_NULL(client);
@@ -180,7 +130,7 @@ static az_result json_child_token_move(az_json_reader* ref_jr, az_span property_
 
 // Check if the component name is in the model
 static bool is_component_in_model(
-    az_iot_pnp_client const* client,
+    az_iot_hub_client const* client,
     az_json_token const* component_name,
     az_span* out_component_name)
 {
@@ -201,10 +151,10 @@ static bool is_component_in_model(
   return false;
 }
 
-AZ_NODISCARD az_result az_iot_pnp_client_property_get_property_version(
-    az_iot_pnp_client const* client,
+AZ_NODISCARD az_result az_iot_hub_client_property_get_property_version(
+    az_iot_hub_client const* client,
     az_json_reader* ref_json_reader,
-    az_iot_pnp_client_property_response_type response_type,
+    az_iot_hub_client_property_response_type response_type,
     int32_t* out_version)
 {
   _az_PRECONDITION_NOT_NULL(client);
@@ -220,7 +170,7 @@ AZ_NODISCARD az_result az_iot_pnp_client_property_get_property_version(
 
   _az_RETURN_IF_FAILED(az_json_reader_next_token(ref_json_reader));
 
-  if (response_type == AZ_IOT_PNP_CLIENT_PROPERTY_RESPONSE_TYPE_GET)
+  if (response_type == AZ_IOT_HUB_CLIENT_PROPERTY_RESPONSE_TYPE_GET)
   {
     _az_RETURN_IF_FAILED(json_child_token_move(ref_json_reader, iot_hub_property_desired));
     _az_RETURN_IF_FAILED(az_json_reader_next_token(ref_json_reader));
@@ -234,7 +184,7 @@ AZ_NODISCARD az_result az_iot_pnp_client_property_get_property_version(
 
 static az_result check_if_skippable(
     az_json_reader* jr,
-    az_iot_pnp_client_property_response_type response_type)
+    az_iot_hub_client_property_response_type response_type)
 {
   // First time move
   if (jr->_internal.bit_stack._internal.current_depth == 0)
@@ -248,7 +198,7 @@ static az_result check_if_skippable(
 
     _az_RETURN_IF_FAILED(az_json_reader_next_token(jr));
 
-    if (response_type == AZ_IOT_PNP_CLIENT_PROPERTY_RESPONSE_TYPE_GET)
+    if (response_type == AZ_IOT_HUB_CLIENT_PROPERTY_RESPONSE_TYPE_GET)
     {
       _az_RETURN_IF_FAILED(json_child_token_move(jr, iot_hub_property_desired));
       _az_RETURN_IF_FAILED(az_json_reader_next_token(jr));
@@ -257,9 +207,9 @@ static az_result check_if_skippable(
   while (true)
   {
     // Within the "root" or "component name" section
-    if ((response_type == AZ_IOT_PNP_CLIENT_PROPERTY_RESPONSE_TYPE_DESIRED_PROPERTIES
+    if ((response_type == AZ_IOT_HUB_CLIENT_PROPERTY_RESPONSE_TYPE_DESIRED_PROPERTIES
          && jr->_internal.bit_stack._internal.current_depth == 1)
-        || (response_type == AZ_IOT_PNP_CLIENT_PROPERTY_RESPONSE_TYPE_GET
+        || (response_type == AZ_IOT_HUB_CLIENT_PROPERTY_RESPONSE_TYPE_GET
             && jr->_internal.bit_stack._internal.current_depth == 2))
     {
       if ((az_json_token_is_text_equal(&jr->token, iot_hub_property_desired_version)))
@@ -277,9 +227,9 @@ static az_result check_if_skippable(
     }
     // Within the property value section
     else if (
-        (response_type == AZ_IOT_PNP_CLIENT_PROPERTY_RESPONSE_TYPE_DESIRED_PROPERTIES
+        (response_type == AZ_IOT_HUB_CLIENT_PROPERTY_RESPONSE_TYPE_DESIRED_PROPERTIES
          && jr->_internal.bit_stack._internal.current_depth == 2)
-        || (response_type == AZ_IOT_PNP_CLIENT_PROPERTY_RESPONSE_TYPE_GET
+        || (response_type == AZ_IOT_HUB_CLIENT_PROPERTY_RESPONSE_TYPE_GET
             && jr->_internal.bit_stack._internal.current_depth == 3))
     {
       if (az_json_token_is_text_equal(&jr->token, component_property_label_name))
@@ -304,7 +254,7 @@ static az_result check_if_skippable(
 
 static bool is_invalid_json_position(
     az_json_reader* jr,
-    az_iot_pnp_client_property_response_type response_type,
+    az_iot_hub_client_property_response_type response_type,
     az_span component_name)
 {
   // Not on a property name or end of object
@@ -316,9 +266,9 @@ static bool is_invalid_json_position(
   }
 
   // Component property - In user property value object
-  if ((response_type == AZ_IOT_PNP_CLIENT_PROPERTY_RESPONSE_TYPE_DESIRED_PROPERTIES
+  if ((response_type == AZ_IOT_HUB_CLIENT_PROPERTY_RESPONSE_TYPE_DESIRED_PROPERTIES
        && jr->_internal.bit_stack._internal.current_depth > 2)
-      || (response_type == AZ_IOT_PNP_CLIENT_PROPERTY_RESPONSE_TYPE_GET
+      || (response_type == AZ_IOT_HUB_CLIENT_PROPERTY_RESPONSE_TYPE_GET
           && jr->_internal.bit_stack._internal.current_depth > 3))
   {
     return true;
@@ -326,9 +276,9 @@ static bool is_invalid_json_position(
 
   // Non-component property - In user property value object
   if ((az_span_size(component_name) == 0)
-      && ((response_type == AZ_IOT_PNP_CLIENT_PROPERTY_RESPONSE_TYPE_DESIRED_PROPERTIES
+      && ((response_type == AZ_IOT_HUB_CLIENT_PROPERTY_RESPONSE_TYPE_DESIRED_PROPERTIES
            && jr->_internal.bit_stack._internal.current_depth > 1)
-          || (response_type == AZ_IOT_PNP_CLIENT_PROPERTY_RESPONSE_TYPE_GET
+          || (response_type == AZ_IOT_HUB_CLIENT_PROPERTY_RESPONSE_TYPE_GET
               && jr->_internal.bit_stack._internal.current_depth > 2)))
   {
     return true;
@@ -340,7 +290,7 @@ static bool is_invalid_json_position(
 /*
 Assuming a JSON of either the below types
 
-AZ_IOT_PNP_CLIENT_PROPERTY_RESPONSE_TYPE_DESIRED_PROPERTIES:
+AZ_IOT_HUB_CLIENT_PROPERTY_RESPONSE_TYPE_DESIRED_PROPERTIES:
 
 {
   //ROOT COMPONENT or COMPONENT NAME section
@@ -357,7 +307,7 @@ AZ_IOT_PNP_CLIENT_PROPERTY_RESPONSE_TYPE_DESIRED_PROPERTIES:
   "$version": 5
 }
 
-AZ_IOT_PNP_CLIENT_PROPERTY_RESPONSE_TYPE_GET:
+AZ_IOT_HUB_CLIENT_PROPERTY_RESPONSE_TYPE_GET:
 
 {
   "desired": {
@@ -383,10 +333,10 @@ AZ_IOT_PNP_CLIENT_PROPERTY_RESPONSE_TYPE_GET:
 }
 
 */
-AZ_NODISCARD az_result az_iot_pnp_client_property_get_next_component_property(
-    az_iot_pnp_client const* client,
+AZ_NODISCARD az_result az_iot_hub_client_property_get_next_component_property(
+    az_iot_hub_client const* client,
     az_json_reader* ref_json_reader,
-    az_iot_pnp_client_property_response_type response_type,
+    az_iot_hub_client_property_response_type response_type,
     az_span* out_component_name)
 {
   _az_PRECONDITION_NOT_NULL(client);
@@ -407,9 +357,9 @@ AZ_NODISCARD az_result az_iot_pnp_client_property_get_next_component_property(
     if (ref_json_reader->token.kind == AZ_JSON_TOKEN_END_OBJECT)
     {
       // At the end of the "root component" or "component name". Done parsing.
-      if ((response_type == AZ_IOT_PNP_CLIENT_PROPERTY_RESPONSE_TYPE_DESIRED_PROPERTIES
+      if ((response_type == AZ_IOT_HUB_CLIENT_PROPERTY_RESPONSE_TYPE_DESIRED_PROPERTIES
            && ref_json_reader->_internal.bit_stack._internal.current_depth == 0)
-          || (response_type == AZ_IOT_PNP_CLIENT_PROPERTY_RESPONSE_TYPE_GET
+          || (response_type == AZ_IOT_HUB_CLIENT_PROPERTY_RESPONSE_TYPE_GET
               && ref_json_reader->_internal.bit_stack._internal.current_depth == 1))
       {
         return AZ_ERROR_IOT_END_OF_PROPERTIES;
@@ -424,9 +374,9 @@ AZ_NODISCARD az_result az_iot_pnp_client_property_get_next_component_property(
   }
 
   // Check if within the "root component" or "component name" section
-  if ((response_type == AZ_IOT_PNP_CLIENT_PROPERTY_RESPONSE_TYPE_DESIRED_PROPERTIES
+  if ((response_type == AZ_IOT_HUB_CLIENT_PROPERTY_RESPONSE_TYPE_DESIRED_PROPERTIES
        && ref_json_reader->_internal.bit_stack._internal.current_depth == 1)
-      || (response_type == AZ_IOT_PNP_CLIENT_PROPERTY_RESPONSE_TYPE_GET
+      || (response_type == AZ_IOT_HUB_CLIENT_PROPERTY_RESPONSE_TYPE_GET
           && ref_json_reader->_internal.bit_stack._internal.current_depth == 2))
   {
     if (is_component_in_model(client, &ref_json_reader->token, out_component_name))
