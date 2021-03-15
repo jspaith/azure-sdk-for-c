@@ -23,6 +23,61 @@ static const az_span methods_response_topic_properties = AZ_SPAN_LITERAL_FROM_ST
 static const az_span command_separator = AZ_SPAN_LITERAL_FROM_STR("*");
 
 
+AZ_NODISCARD az_result az_iot_hub_get_request_id_and_name(
+    az_span received_topic,
+    az_span* out_request_id,
+    az_span* out_name,
+    int32_t* out_index
+)
+{
+    int32_t index = az_span_find(received_topic, methods_topic_prefix);
+    
+    if (index == -1)
+    {
+      return AZ_ERROR_IOT_TOPIC_NO_MATCH;
+    }
+    
+    if (_az_LOG_SHOULD_WRITE(AZ_LOG_MQTT_RECEIVED_TOPIC))
+    {
+      _az_LOG_WRITE(AZ_LOG_MQTT_RECEIVED_TOPIC, received_topic);
+    }
+    
+    received_topic = az_span_slice(
+        received_topic, index + az_span_size(methods_topic_prefix), az_span_size(received_topic));
+    
+    index = az_span_find(received_topic, methods_topic_filter_suffix);
+    
+    if (index == -1)
+    {
+      return AZ_ERROR_IOT_TOPIC_NO_MATCH;
+    }
+    
+    received_topic = az_span_slice(
+        received_topic,
+        index + az_span_size(methods_topic_filter_suffix),
+        az_span_size(received_topic));
+    
+    index = az_span_find(received_topic, methods_response_topic_properties);
+    
+    if (index == -1)
+    {
+      return AZ_ERROR_IOT_TOPIC_NO_MATCH;
+    }
+    
+    *out_name = az_span_slice(received_topic, 0, index);
+    *out_request_id = az_span_slice(
+        received_topic,
+        index + az_span_size(methods_response_topic_properties),
+        az_span_size(received_topic));
+
+    if (out_index != NULL)
+    {
+        *out_index = index;
+    }
+
+    return AZ_OK;
+}
+    
 AZ_NODISCARD az_result az_iot_hub_client_methods_parse_received_topic(
     az_iot_hub_client const* client,
     az_span received_topic,
@@ -35,47 +90,14 @@ AZ_NODISCARD az_result az_iot_hub_client_methods_parse_received_topic(
 
   (void)client;
 
-  int32_t index = az_span_find(received_topic, methods_topic_prefix);
+  _az_RETURN_IF_FAILED(az_iot_hub_get_request_id_and_name(
+    received_topic,
+    &out_request->request_id,
+    &out_request->name,
+    NULL)
+    );
 
-  if (index == -1)
-  {
-    return AZ_ERROR_IOT_TOPIC_NO_MATCH;
-  }
-
-  if (_az_LOG_SHOULD_WRITE(AZ_LOG_MQTT_RECEIVED_TOPIC))
-  {
-    _az_LOG_WRITE(AZ_LOG_MQTT_RECEIVED_TOPIC, received_topic);
-  }
-
-  received_topic = az_span_slice(
-      received_topic, index + az_span_size(methods_topic_prefix), az_span_size(received_topic));
-
-  index = az_span_find(received_topic, methods_topic_filter_suffix);
-
-  if (index == -1)
-  {
-    return AZ_ERROR_IOT_TOPIC_NO_MATCH;
-  }
-
-  received_topic = az_span_slice(
-      received_topic,
-      index + az_span_size(methods_topic_filter_suffix),
-      az_span_size(received_topic));
-
-  index = az_span_find(received_topic, methods_response_topic_properties);
-
-  if (index == -1)
-  {
-    return AZ_ERROR_IOT_TOPIC_NO_MATCH;
-  }
-
-  out_request->name = az_span_slice(received_topic, 0, index);
-  out_request->request_id = az_span_slice(
-      received_topic,
-      index + az_span_size(methods_response_topic_properties),
-      az_span_size(received_topic));
-
-  return AZ_OK;
+    return AZ_OK;
 }
 
 AZ_NODISCARD az_result az_iot_hub_client_methods_response_get_publish_topic(
@@ -120,6 +142,40 @@ AZ_NODISCARD az_result az_iot_hub_client_methods_response_get_publish_topic(
 }
 
 
+AZ_NODISCARD az_result az_iot_hub_client_commands_parse_received_topic(
+    az_iot_hub_client const* client,
+    az_span received_topic,
+    az_iot_hub_client_command_request* out_request)
+{
+  _az_PRECONDITION_NOT_NULL(client);
+  _az_PRECONDITION_VALID_SPAN(received_topic, 1, false);
+  _az_PRECONDITION_NOT_NULL(out_request);
+
+  (void)client;
+  int32_t index;
+
+  _az_RETURN_IF_FAILED(az_iot_hub_get_request_id_and_name(
+    received_topic,
+    &out_request->request_id,
+    &out_request->command_name,
+    &index)
+    );
+
+  int32_t command_separator_index = az_span_find(received_topic, command_separator);
+  if (command_separator_index > 0)
+  {
+    out_request->component_name = az_span_slice(received_topic, 0, command_separator_index);
+    out_request->command_name = az_span_slice(received_topic, command_separator_index + 1, index);
+  }
+  else
+  {
+    out_request->component_name = AZ_SPAN_EMPTY;
+    out_request->command_name = az_span_slice(received_topic, 0, index);
+  }
+
+  return AZ_OK;
+}
+
 AZ_NODISCARD az_result az_iot_hub_client_commands_response_get_publish_topic(
     az_iot_hub_client const* client,
     az_span request_id,
@@ -135,64 +191,5 @@ AZ_NODISCARD az_result az_iot_hub_client_commands_response_get_publish_topic(
       mqtt_topic,
       mqtt_topic_size,
       out_mqtt_topic_length);
-}
-
-
-AZ_NODISCARD az_result az_iot_hub_client_commands_parse_received_topic(
-    az_iot_hub_client const* client,
-    az_span received_topic,
-    az_iot_hub_client_command_request* out_request)
-{
-  _az_PRECONDITION_NOT_NULL(client);
-  _az_PRECONDITION_VALID_SPAN(received_topic, 1, false);
-  _az_PRECONDITION_NOT_NULL(out_request);
-
-  (void)client;
-
-  int32_t index = az_span_find(received_topic, methods_topic_prefix);
-
-  if (index == -1)
-  {
-    return AZ_ERROR_IOT_TOPIC_NO_MATCH;
-  }
-
-  _az_LOG_WRITE(AZ_LOG_MQTT_RECEIVED_TOPIC, received_topic);
-
-  received_topic
-      = az_span_slice_to_end(received_topic, index + az_span_size(methods_topic_prefix));
-
-  index = az_span_find(received_topic, methods_topic_filter_suffix);
-
-  if (index == -1)
-  {
-    return AZ_ERROR_IOT_TOPIC_NO_MATCH;
-  }
-
-  received_topic
-      = az_span_slice_to_end(received_topic, index + az_span_size(methods_topic_filter_suffix));
-
-  index = az_span_find(received_topic, methods_response_topic_properties);
-
-  if (index == -1)
-  {
-    return AZ_ERROR_IOT_TOPIC_NO_MATCH;
-  }
-
-  out_request->request_id = az_span_slice_to_end(
-      received_topic, index + az_span_size(methods_response_topic_properties));
-
-  int32_t command_separator_index = az_span_find(received_topic, command_separator);
-  if (command_separator_index > 0)
-  {
-    out_request->component_name = az_span_slice(received_topic, 0, command_separator_index);
-    out_request->command_name = az_span_slice(received_topic, command_separator_index + 1, index);
-  }
-  else
-  {
-    out_request->component_name = AZ_SPAN_EMPTY;
-    out_request->command_name = az_span_slice(received_topic, 0, index);
-  }
-
-  return AZ_OK;
 }
 
