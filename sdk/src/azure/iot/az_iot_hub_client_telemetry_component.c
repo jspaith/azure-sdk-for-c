@@ -16,15 +16,18 @@ static const uint8_t null_terminator = '\0';
 static const az_span telemetry_topic_prefix = AZ_SPAN_LITERAL_FROM_STR("devices/");
 static const az_span telemetry_topic_modules_mid = AZ_SPAN_LITERAL_FROM_STR("/modules/");
 static const az_span telemetry_topic_suffix = AZ_SPAN_LITERAL_FROM_STR("/messages/events/");
+static const az_span telemetry_component_prop_span = AZ_SPAN_LITERAL_FROM_STR("$.sub");
 
-AZ_NODISCARD az_result az_iot_hub_client_telemetry_get_publish_topic(
+AZ_NODISCARD az_result az_iot_client_telemetry_with_component_get_publish_topic(
     az_iot_hub_client const* client,
-    az_iot_message_properties const* properties,
+    az_span component_name,
+    az_iot_message_properties* properties,
     char* mqtt_topic,
     size_t mqtt_topic_size,
     size_t* out_mqtt_topic_length)
 {
   _az_PRECONDITION_NOT_NULL(client);
+  _az_PRECONDITION(az_span_size(component_name) > 0);
   _az_PRECONDITION_NOT_NULL(mqtt_topic);
   _az_PRECONDITION(mqtt_topic_size > 0);
 
@@ -32,12 +35,21 @@ AZ_NODISCARD az_result az_iot_hub_client_telemetry_get_publish_topic(
 
   az_span mqtt_topic_span = az_span_create((uint8_t*)mqtt_topic, (int32_t)mqtt_topic_size);
   int32_t required_length = az_span_size(telemetry_topic_prefix)
-      + az_span_size(client->_internal.device_id) + az_span_size(telemetry_topic_suffix);
+      + az_span_size(client->_internal.device_id)
+      + az_span_size(telemetry_topic_suffix);
   int32_t module_id_length = az_span_size(*module_id);
   if (module_id_length > 0)
   {
     required_length += az_span_size(telemetry_topic_modules_mid) + module_id_length;
   }
+
+  required_length += az_span_size(telemetry_component_prop_span) + az_span_size(component_name)
+    + 1; // One for `=`
+  if (properties != NULL)
+  {
+    required_length++; // For `&`
+  }
+
   if (properties != NULL)
   {
     required_length += properties->_internal.properties_written;
@@ -57,6 +69,15 @@ AZ_NODISCARD az_result az_iot_hub_client_telemetry_get_publish_topic(
 
   remainder = az_span_copy(remainder, telemetry_topic_suffix);
 
+  remainder = az_span_copy(remainder, telemetry_component_prop_span);
+  remainder = az_span_copy_u8(remainder, '=');
+  remainder = az_span_copy(remainder, component_name);
+
+  if (properties != NULL)
+  {
+    remainder = az_span_copy_u8(remainder, '&');
+  }
+
   if (properties != NULL)
   {
     remainder = az_span_copy(
@@ -74,3 +95,4 @@ AZ_NODISCARD az_result az_iot_hub_client_telemetry_get_publish_topic(
 
   return AZ_OK;
 }
+    

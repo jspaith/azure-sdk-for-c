@@ -71,7 +71,6 @@ add_executable (paho_iot_pnp_sample
 target_link_libraries(paho_iot_pnp_sample
   PRIVATE
     az::iot::sample::common
-    az::iot::pnp
 )
 
 # PnP Sample
@@ -82,7 +81,6 @@ add_executable (paho_iot_pnp_with_provisioning_sample
 target_link_libraries(paho_iot_pnp_with_provisioning_sample
   PRIVATE
     az::iot::sample::common
-    az::iot::pnp
 )
 
 # PnP Component Sample
@@ -97,7 +95,6 @@ add_executable (paho_iot_pnp_component_sample
 target_link_libraries(paho_iot_pnp_component_sample
   PRIVATE
     az::iot::sample::common
-    az::iot::pnp
 )
 
 target_include_directories(paho_iot_pnp_component_sample

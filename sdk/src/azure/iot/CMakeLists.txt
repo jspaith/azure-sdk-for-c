@@ -26,6 +26,16 @@ target_link_libraries(az_iot_common
 
 add_library (az::iot::common ALIAS az_iot_common)
 
+# Azure IoT Plug and Play source files for use when implementing a 
+# PnP device, i.e. one that implements a model using Digital Twins 
+# Definition Language (DTDL).  These files can be removed needed.
+set(az_iot_pnp_source_files   
+  ${CMAKE_CURRENT_LIST_DIR}/az_iot_hub_client_commands.c
+  ${CMAKE_CURRENT_LIST_DIR}/az_iot_hub_client_property.c
+  ${CMAKE_CURRENT_LIST_DIR}/az_iot_hub_client_property_format.c
+  ${CMAKE_CURRENT_LIST_DIR}/az_iot_hub_client_telemetry_component.c
+)
+
 # Azure IoT Hub Library
 add_library (az_iot_hub
   ${CMAKE_CURRENT_LIST_DIR}/az_iot_hub_client.c
@@ -34,6 +44,7 @@ add_library (az_iot_hub
   ${CMAKE_CURRENT_LIST_DIR}/az_iot_hub_client_c2d.c
   ${CMAKE_CURRENT_LIST_DIR}/az_iot_hub_client_twin.c
   ${CMAKE_CURRENT_LIST_DIR}/az_iot_hub_client_methods.c
+  ${az_iot_pnp_source_files}
 )
 
 target_include_directories (az_iot_hub
@@ -48,25 +59,6 @@ target_link_libraries(az_iot_hub
 )
 
 add_library (az::iot::hub ALIAS az_iot_hub)
-
-# Azure IoT Plug and Play Library
-add_library (az_iot_pnp
-  ${CMAKE_CURRENT_LIST_DIR}/az_iot_property_format.c
-)
-
-target_include_directories (az_iot_pnp
-  PUBLIC
-    ${az_SOURCE_DIR}/sdk/inc
-)
-
-target_link_libraries(az_iot_pnp
-  PUBLIC
-    az::core
-    az::iot::common
-    az::iot::hub
-)
-
-add_library (az::iot::pnp ALIAS az_iot_pnp)
 
 # Azure IoT Provisioning Service Library
 add_library (az_iot_provisioning
@@ -94,5 +86,4 @@ set(COV_EXCLUDE
 
 create_code_coverage_targets(az_iot_common)
 create_code_coverage_targets(az_iot_hub)
-create_code_coverage_targets(az_iot_pnp)
 create_code_coverage_targets(az_iot_provisioning)
