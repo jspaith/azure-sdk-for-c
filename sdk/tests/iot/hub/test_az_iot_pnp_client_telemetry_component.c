@@ -1,11 +1,11 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-#include "test_az_iot_pnp_client.h"
+#include "test_az_iot_hub_client.h"
 #include <az_test_span.h>
 #include <azure/core/az_span.h>
 #include <azure/core/az_version.h>
-#include <azure/iot/az_iot_pnp_client.h>
+#include <azure/iot/az_iot_hub_client.h>
 
 #include <azure/core/az_precondition.h>
 #include <azure/core/internal/az_precondition_internal.h>
@@ -14,6 +14,8 @@
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdint.h>
+
+// az_iot_client_telemetry_with_component, az_iot_client_telemetry_with_component 
 
 #include <az_test_precondition.h>
 #include <cmocka.h>
@@ -53,112 +55,150 @@ static const char g_test_correct_topic_with_options_module_id_with_props[]
 #ifndef AZ_NO_PRECONDITION_CHECKING
 ENABLE_PRECONDITION_CHECK_TESTS()
 
-static void test_az_iot_pnp_client_telemetry_get_publish_topic_NULL_client_fails(void** state)
+static void az_iot_client_telemetry_with_component_get_publish_topic_NULL_client_fails(void** state)
 {
   (void)state;
 
   char test_buf[TEST_SPAN_BUFFER_SIZE];
   size_t test_length;
 
-  ASSERT_PRECONDITION_CHECKED(az_iot_pnp_client_telemetry_get_publish_topic(
+  ASSERT_PRECONDITION_CHECKED(az_iot_client_telemetry_with_component_get_publish_topic(
       NULL, test_component_one, NULL, test_buf, sizeof(test_buf), &test_length));
 }
 
-static void test_az_iot_pnp_client_telemetry_get_publish_topic_NULL_mqtt_topic_fails(void** state)
+static void az_iot_client_telemetry_with_component_get_publish_topic_NULL_mqtt_topic_fails(void** state)
 {
   (void)state;
 
-  az_iot_pnp_client client;
+  az_iot_hub_client_options options = az_iot_hub_client_options_default();
+  options.module_id = test_module_id;
+
+  az_iot_hub_client client;
+
   assert_int_equal(
-      az_iot_pnp_client_init(&client, test_device_hostname, test_device_id, test_model_id, NULL),
+      az_iot_hub_client_init(&client, test_device_hostname, test_device_id, NULL),
       AZ_OK);
 
   size_t test_length;
 
-  ASSERT_PRECONDITION_CHECKED(az_iot_pnp_client_telemetry_get_publish_topic(
+  ASSERT_PRECONDITION_CHECKED(az_iot_client_telemetry_with_component_get_publish_topic(
       &client, test_component_one, NULL, NULL, TEST_SPAN_BUFFER_SIZE, &test_length));
 }
 
-static void test_az_iot_pnp_client_telemetry_get_publish_topic_NULL_out_mqtt_topic_fails(
+static void az_iot_client_telemetry_with_component_get_publish_topic_NULL_out_mqtt_topic_fails(
     void** state)
 {
   (void)state;
 
-  az_iot_pnp_client client;
+  az_iot_hub_client_options options = az_iot_hub_client_options_default();
+  options.module_id = test_module_id;
+
+  az_iot_hub_client client;
+
   assert_int_equal(
-      az_iot_pnp_client_init(&client, test_device_hostname, test_device_id, test_model_id, NULL),
+      az_iot_hub_client_init(&client, test_device_hostname, test_device_id, NULL),
       AZ_OK);
 
   char test_buf[TEST_SPAN_BUFFER_SIZE];
   size_t test_length;
 
-  ASSERT_PRECONDITION_CHECKED(az_iot_pnp_client_telemetry_get_publish_topic(
+  ASSERT_PRECONDITION_CHECKED(az_iot_client_telemetry_with_component_get_publish_topic(
       &client, test_component_one, NULL, test_buf, 0, &test_length));
+}
+
+static void az_iot_client_telemetry_with_component_get_publish_topic_empty_span_componentName_fails(
+    void** state)
+{
+  (void)state;
+
+  az_iot_hub_client_options options = az_iot_hub_client_options_default();
+  options.module_id = test_module_id;
+
+  az_iot_hub_client client;
+
+  assert_int_equal(
+      az_iot_hub_client_init(&client, test_device_hostname, test_device_id, NULL),
+      AZ_OK);
+
+  char test_buf[TEST_SPAN_BUFFER_SIZE];
+  size_t test_length;
+
+  ASSERT_PRECONDITION_CHECKED(az_iot_client_telemetry_with_component_get_publish_topic(
+      &client, AZ_SPAN_EMPTY, NULL, test_buf, sizeof(test_buf), &test_length));
 }
 
 #endif // AZ_NO_PRECONDITION_CHECKING
 
-static void test_az_iot_pnp_client_telemetry_get_publish_topic_no_comp_no_options_no_props_succeed(
+static void az_iot_client_telemetry_with_component_get_publish_topic_no_comp_no_options_no_props_succeed(
     void** state)
 {
   (void)state;
 
-  az_iot_pnp_client client;
+  az_iot_hub_client_options options = az_iot_hub_client_options_default();
+  options.module_id = test_module_id;
+
+  az_iot_hub_client client;
+
   assert_int_equal(
-      az_iot_pnp_client_init(&client, test_device_hostname, test_device_id, test_model_id, NULL),
+      az_iot_hub_client_init(&client, test_device_hostname, test_device_id, &options),
       AZ_OK);
 
   char test_buf[TEST_SPAN_BUFFER_SIZE];
   size_t test_length;
 
   assert_true(
-      az_iot_pnp_client_telemetry_get_publish_topic(
+      az_iot_client_telemetry_with_component_get_publish_topic(
           &client, AZ_SPAN_EMPTY, NULL, test_buf, sizeof(test_buf), &test_length)
       == AZ_OK);
   assert_string_equal(g_test_correct_topic_no_comp_no_options_no_props, test_buf);
   assert_int_equal(sizeof(g_test_correct_topic_no_comp_no_options_no_props) - 1, test_length);
 }
 
-static void test_az_iot_pnp_client_telemetry_get_publish_topic_no_options_no_props_succeed(
+static void az_iot_client_telemetry_with_component_get_publish_topic_no_options_no_props_succeed(
     void** state)
 {
   (void)state;
 
-  az_iot_pnp_client client;
+  az_iot_hub_client_options options = az_iot_hub_client_options_default();
+  options.module_id = test_module_id;
+
+  az_iot_hub_client client;
+
   assert_int_equal(
-      az_iot_pnp_client_init(&client, test_device_hostname, test_device_id, test_model_id, NULL),
+      az_iot_hub_client_init(&client, test_device_hostname, test_device_id, &options),
       AZ_OK);
 
   char test_buf[TEST_SPAN_BUFFER_SIZE];
   size_t test_length;
 
   assert_true(
-      az_iot_pnp_client_telemetry_get_publish_topic(
+      az_iot_client_telemetry_with_component_get_publish_topic(
           &client, test_component_one, NULL, test_buf, sizeof(test_buf), &test_length)
       == AZ_OK);
   assert_string_equal(g_test_correct_topic_no_options_no_props, test_buf);
   assert_int_equal(sizeof(g_test_correct_topic_no_options_no_props) - 1, test_length);
 }
 
-static void test_az_iot_pnp_client_telemetry_get_publish_topic_with_options_no_props_succeed(
+static void az_iot_client_telemetry_with_component_get_publish_topic_with_options_no_props_succeed(
     void** state)
 {
   (void)state;
 
-  az_iot_pnp_client_options options = az_iot_pnp_client_options_default();
+  az_iot_hub_client_options options = az_iot_hub_client_options_default();
   options.module_id = test_module_id;
+  options.model_id = test_model_id;
 
-  az_iot_pnp_client client;
+  az_iot_hub_client client;
   assert_int_equal(
-      az_iot_pnp_client_init(
-          &client, test_device_hostname, test_device_id, test_model_id, &options),
+      az_iot_hub_client_init(
+          &client, test_device_hostname, test_device_id, &options),
       AZ_OK);
 
   char test_buf[TEST_SPAN_BUFFER_SIZE];
   size_t test_length;
 
   assert_true(
-      az_iot_pnp_client_telemetry_get_publish_topic(
+      az_iot_client_telemetry_with_component_get_publish_topic(
           &client, test_component_one, NULL, test_buf, sizeof(test_buf), &test_length)
       == AZ_OK);
 
@@ -167,18 +207,19 @@ static void test_az_iot_pnp_client_telemetry_get_publish_topic_with_options_no_p
 }
 
 static void
-test_az_iot_pnp_client_telemetry_get_publish_topic_no_comp_with_options_with_props_succeed(
+az_iot_client_telemetry_with_component_get_publish_topic_no_comp_with_options_with_props_succeed(
     void** state)
 {
   (void)state;
 
-  az_iot_pnp_client_options options = az_iot_pnp_client_options_default();
+  az_iot_hub_client_options options = az_iot_hub_client_options_default();
   options.module_id = test_module_id;
+  options.model_id = test_model_id;
 
-  az_iot_pnp_client client;
+  az_iot_hub_client client;
   assert_int_equal(
-      az_iot_pnp_client_init(
-          &client, test_device_hostname, test_device_id, test_model_id, &options),
+      az_iot_hub_client_init(
+          &client, test_device_hostname, test_device_id, &options),
       AZ_OK);
 
   az_iot_message_properties props;
@@ -191,7 +232,7 @@ test_az_iot_pnp_client_telemetry_get_publish_topic_no_comp_with_options_with_pro
   size_t test_length;
 
   assert_true(
-      az_iot_pnp_client_telemetry_get_publish_topic(
+      az_iot_client_telemetry_with_component_get_publish_topic(
           &client, AZ_SPAN_EMPTY, &props, test_buf, sizeof(test_buf), &test_length)
       == AZ_OK);
 
@@ -199,18 +240,19 @@ test_az_iot_pnp_client_telemetry_get_publish_topic_no_comp_with_options_with_pro
   assert_int_equal(sizeof(g_test_correct_topic_no_comp_with_options_with_props) - 1, test_length);
 }
 
-static void test_az_iot_pnp_client_telemetry_get_publish_topic_with_options_with_props_succeed(
+static void az_iot_client_telemetry_with_component_get_publish_topic_with_options_with_props_succeed(
     void** state)
 {
   (void)state;
 
-  az_iot_pnp_client_options options = az_iot_pnp_client_options_default();
+  az_iot_hub_client_options options = az_iot_hub_client_options_default();
   options.module_id = test_module_id;
+  options.model_id = test_model_id;
 
-  az_iot_pnp_client client;
+  az_iot_hub_client client;
   assert_int_equal(
-      az_iot_pnp_client_init(
-          &client, test_device_hostname, test_device_id, test_model_id, &options),
+      az_iot_hub_client_init(
+          &client, test_device_hostname, test_device_id, &options),
       AZ_OK);
 
   az_iot_message_properties props;
@@ -223,7 +265,7 @@ static void test_az_iot_pnp_client_telemetry_get_publish_topic_with_options_with
   size_t test_length;
 
   assert_true(
-      az_iot_pnp_client_telemetry_get_publish_topic(
+      az_iot_client_telemetry_with_component_get_publish_topic(
           &client, test_component_one, &props, test_buf, sizeof(test_buf), &test_length)
       == AZ_OK);
 
@@ -231,14 +273,17 @@ static void test_az_iot_pnp_client_telemetry_get_publish_topic_with_options_with
   assert_int_equal(sizeof(g_test_correct_topic_with_options_with_props) - 1, test_length);
 }
 
-static void test_az_iot_pnp_client_telemetry_get_publish_topic_with_props_unfilled_succeed(
+static void az_iot_client_telemetry_with_component_get_publish_topic_with_props_unfilled_succeed(
     void** state)
 {
   (void)state;
 
-  az_iot_pnp_client client;
+  az_iot_hub_client_options options = az_iot_hub_client_options_default();
+  options.model_id = test_model_id;
+
+  az_iot_hub_client client;
   assert_int_equal(
-      az_iot_pnp_client_init(&client, test_device_hostname, test_device_id, test_model_id, NULL),
+      az_iot_hub_client_init(&client, test_device_hostname, test_device_id, &options),
       AZ_OK);
 
   // Create unfilled property span
@@ -260,7 +305,7 @@ static void test_az_iot_pnp_client_telemetry_get_publish_topic_with_props_unfill
   size_t test_length;
 
   assert_true(
-      az_iot_pnp_client_telemetry_get_publish_topic(
+      az_iot_client_telemetry_with_component_get_publish_topic(
           &client, test_component_one, &props, test_buf, sizeof(test_buf), &test_length)
       == AZ_OK);
 
@@ -269,18 +314,19 @@ static void test_az_iot_pnp_client_telemetry_get_publish_topic_with_props_unfill
 }
 
 static void
-test_az_iot_pnp_client_telemetry_get_publish_topic_with_options_with_props_small_buffer_fails(
+az_iot_client_telemetry_with_component_get_publish_topic_with_options_with_props_small_buffer_fails(
     void** state)
 {
   (void)state;
 
-  az_iot_pnp_client_options options = az_iot_pnp_client_options_default();
+  az_iot_hub_client_options options = az_iot_hub_client_options_default();
   options.module_id = test_module_id;
+  options.model_id = test_model_id;
 
-  az_iot_pnp_client client;
+  az_iot_hub_client client;
   assert_int_equal(
-      az_iot_pnp_client_init(
-          &client, test_device_hostname, test_device_id, test_model_id, &options),
+      az_iot_hub_client_init(
+          &client, test_device_hostname, test_device_id, &options),
       AZ_OK);
 
   az_iot_message_properties props;
@@ -291,19 +337,22 @@ test_az_iot_pnp_client_telemetry_get_publish_topic_with_options_with_props_small
   size_t test_length;
 
   assert_true(
-      az_iot_pnp_client_telemetry_get_publish_topic(
+      az_iot_client_telemetry_with_component_get_publish_topic(
           &client, test_component_one, &props, test_buf, sizeof(test_buf), &test_length)
       == AZ_ERROR_NOT_ENOUGH_SPACE);
 }
 
-static void test_az_iot_pnp_client_telemetry_get_publish_topic_no_options_with_props_succeed(
+static void az_iot_client_telemetry_with_component_get_publish_topic_no_options_with_props_succeed(
     void** state)
 {
   (void)state;
 
-  az_iot_pnp_client client;
+  az_iot_hub_client_options options = az_iot_hub_client_options_default();
+  options.model_id = test_model_id;
+
+  az_iot_hub_client client;
   assert_int_equal(
-      az_iot_pnp_client_init(&client, test_device_hostname, test_device_id, test_model_id, NULL),
+      az_iot_hub_client_init(&client, test_device_hostname, test_device_id, &options),
       AZ_OK);
 
   az_iot_message_properties props;
@@ -316,7 +365,7 @@ static void test_az_iot_pnp_client_telemetry_get_publish_topic_no_options_with_p
   size_t test_length;
 
   assert_true(
-      az_iot_pnp_client_telemetry_get_publish_topic(
+      az_iot_client_telemetry_with_component_get_publish_topic(
           &client, test_component_one, &props, test_buf, sizeof(test_buf), &test_length)
       == AZ_OK);
 
@@ -325,14 +374,17 @@ static void test_az_iot_pnp_client_telemetry_get_publish_topic_no_options_with_p
 }
 
 static void
-test_az_iot_pnp_client_telemetry_get_publish_topic_no_options_with_props_small_buffer_fails(
+az_iot_client_telemetry_with_component_get_publish_topic_no_options_with_props_small_buffer_fails(
     void** state)
 {
   (void)state;
 
-  az_iot_pnp_client client;
+  az_iot_hub_client_options options = az_iot_hub_client_options_default();
+  options.model_id = test_model_id;
+
+  az_iot_hub_client client;
   assert_int_equal(
-      az_iot_pnp_client_init(&client, test_device_hostname, test_device_id, test_model_id, NULL),
+      az_iot_hub_client_init(&client, test_device_hostname, test_device_id, &options),
       AZ_OK);
 
   az_iot_message_properties props;
@@ -343,24 +395,24 @@ test_az_iot_pnp_client_telemetry_get_publish_topic_no_options_with_props_small_b
   size_t test_length;
 
   assert_true(
-      az_iot_pnp_client_telemetry_get_publish_topic(
+      az_iot_client_telemetry_with_component_get_publish_topic(
           &client, test_component_one, &props, test_buf, sizeof(test_buf), &test_length)
       == AZ_ERROR_NOT_ENOUGH_SPACE);
 }
 
 static void
-test_az_iot_pnp_client_telemetry_get_publish_topic_with_options_module_id_with_props_succeed(
+az_iot_client_telemetry_with_component_get_publish_topic_with_options_module_id_with_props_succeed(
     void** state)
 {
   (void)state;
 
-  az_iot_pnp_client_options options = az_iot_pnp_client_options_default();
+  az_iot_hub_client_options options = az_iot_hub_client_options_default();
   options.module_id = test_module_id;
 
-  az_iot_pnp_client client;
+  az_iot_hub_client client;
   assert_int_equal(
-      az_iot_pnp_client_init(
-          &client, test_device_hostname, test_device_id, test_model_id, &options),
+      az_iot_hub_client_init(
+          &client, test_device_hostname, test_device_id, &options),
       AZ_OK);
 
   az_iot_message_properties props;
@@ -373,7 +425,7 @@ test_az_iot_pnp_client_telemetry_get_publish_topic_with_options_module_id_with_p
   size_t test_length;
 
   assert_true(
-      az_iot_pnp_client_telemetry_get_publish_topic(
+      az_iot_client_telemetry_with_component_get_publish_topic(
           &client, test_component_one, &props, test_buf, sizeof(test_buf), &test_length)
       == AZ_OK);
 
@@ -382,18 +434,18 @@ test_az_iot_pnp_client_telemetry_get_publish_topic_with_options_module_id_with_p
 }
 
 static void
-test_az_iot_pnp_client_telemetry_get_publish_topic_with_options_module_id_with_props_small_buffer_fails(
+az_iot_client_telemetry_with_component_get_publish_topic_with_options_module_id_with_props_small_buffer_fails(
     void** state)
 {
   (void)state;
 
-  az_iot_pnp_client_options options = az_iot_pnp_client_options_default();
+  az_iot_hub_client_options options = az_iot_hub_client_options_default();
   options.module_id = test_module_id;
 
-  az_iot_pnp_client client;
+  az_iot_hub_client client;
   assert_int_equal(
-      az_iot_pnp_client_init(
-          &client, test_device_hostname, test_device_id, test_model_id, &options),
+      az_iot_hub_client_init(
+          &client, test_device_hostname, test_device_id, &options),
       AZ_OK);
 
   az_iot_message_properties props;
@@ -406,12 +458,12 @@ test_az_iot_pnp_client_telemetry_get_publish_topic_with_options_module_id_with_p
   size_t test_length;
 
   assert_true(
-      az_iot_pnp_client_telemetry_get_publish_topic(
+      az_iot_client_telemetry_with_component_get_publish_topic(
           &client, test_component_one, &props, test_buf, sizeof(test_buf), &test_length)
       == AZ_ERROR_NOT_ENOUGH_SPACE);
 }
 
-int test_az_iot_pnp_client_telemetry()
+int test_az_iot_hub_client_telemetry_with_component()
 {
 #ifndef AZ_NO_PRECONDITION_CHECKING
   SETUP_PRECONDITION_CHECK_TESTS();
@@ -419,33 +471,33 @@ int test_az_iot_pnp_client_telemetry()
 
   const struct CMUnitTest tests[] = {
 #ifndef AZ_NO_PRECONDITION_CHECKING
-    cmocka_unit_test(test_az_iot_pnp_client_telemetry_get_publish_topic_NULL_client_fails),
-    cmocka_unit_test(test_az_iot_pnp_client_telemetry_get_publish_topic_NULL_mqtt_topic_fails),
-    cmocka_unit_test(test_az_iot_pnp_client_telemetry_get_publish_topic_NULL_out_mqtt_topic_fails),
+    cmocka_unit_test(az_iot_client_telemetry_with_component_get_publish_topic_NULL_client_fails),
+    cmocka_unit_test(az_iot_client_telemetry_with_component_get_publish_topic_NULL_mqtt_topic_fails),
+    cmocka_unit_test(az_iot_client_telemetry_with_component_get_publish_topic_NULL_out_mqtt_topic_fails),
 #endif // AZ_NO_PRECONDITION_CHECKING
     cmocka_unit_test(
-        test_az_iot_pnp_client_telemetry_get_publish_topic_no_comp_no_options_no_props_succeed),
+        az_iot_client_telemetry_with_component_get_publish_topic_no_comp_no_options_no_props_succeed),
     cmocka_unit_test(
-        test_az_iot_pnp_client_telemetry_get_publish_topic_no_options_no_props_succeed),
+        az_iot_client_telemetry_with_component_get_publish_topic_no_options_no_props_succeed),
     cmocka_unit_test(
-        test_az_iot_pnp_client_telemetry_get_publish_topic_with_options_no_props_succeed),
+        az_iot_client_telemetry_with_component_get_publish_topic_with_options_no_props_succeed),
     cmocka_unit_test(
-        test_az_iot_pnp_client_telemetry_get_publish_topic_no_comp_with_options_with_props_succeed),
+        az_iot_client_telemetry_with_component_get_publish_topic_no_comp_with_options_with_props_succeed),
     cmocka_unit_test(
-        test_az_iot_pnp_client_telemetry_get_publish_topic_with_options_with_props_succeed),
+        az_iot_client_telemetry_with_component_get_publish_topic_with_options_with_props_succeed),
     cmocka_unit_test(
-        test_az_iot_pnp_client_telemetry_get_publish_topic_with_props_unfilled_succeed),
+        az_iot_client_telemetry_with_component_get_publish_topic_with_props_unfilled_succeed),
     cmocka_unit_test(
-        test_az_iot_pnp_client_telemetry_get_publish_topic_with_options_with_props_small_buffer_fails),
+        az_iot_client_telemetry_with_component_get_publish_topic_with_options_with_props_small_buffer_fails),
     cmocka_unit_test(
-        test_az_iot_pnp_client_telemetry_get_publish_topic_no_options_with_props_succeed),
+        az_iot_client_telemetry_with_component_get_publish_topic_no_options_with_props_succeed),
     cmocka_unit_test(
-        test_az_iot_pnp_client_telemetry_get_publish_topic_no_options_with_props_small_buffer_fails),
+        az_iot_client_telemetry_with_component_get_publish_topic_no_options_with_props_small_buffer_fails),
     cmocka_unit_test(
-        test_az_iot_pnp_client_telemetry_get_publish_topic_with_options_module_id_with_props_succeed),
+        az_iot_client_telemetry_with_component_get_publish_topic_with_options_module_id_with_props_succeed),
     cmocka_unit_test(
-        test_az_iot_pnp_client_telemetry_get_publish_topic_with_options_module_id_with_props_small_buffer_fails),
+        az_iot_client_telemetry_with_component_get_publish_topic_with_options_module_id_with_props_small_buffer_fails),
   };
 
-  return cmocka_run_group_tests_name("az_iot_pnp_client_telemetry", tests, NULL, NULL);
+  return cmocka_run_group_tests_name("az_iot_hub_client_telemetry_with_component", tests, NULL, NULL);
 }
