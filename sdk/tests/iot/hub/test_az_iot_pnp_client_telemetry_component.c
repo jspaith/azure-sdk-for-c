@@ -33,15 +33,10 @@ static az_span test_component_one = AZ_SPAN_LITERAL_FROM_STR("component_one");
 
 static char test_props_buffer[64] = TEST_PROPS_STR;
 
-static const char g_test_correct_topic_no_comp_no_options_no_props[]
-    = "devices/my_device/messages/events/";
 static const char g_test_correct_topic_no_options_no_props[]
     = "devices/my_device/messages/events/$.sub=component_one";
 static const char g_test_correct_topic_with_options_no_props[]
     = "devices/my_device/modules/my_module_id/messages/events/$.sub=component_one";
-static const char g_test_correct_topic_no_comp_with_options_with_props[]
-    = "devices/my_device/modules/my_module_id/messages/events/"
-      "key=value&key_two=value2";
 static const char g_test_correct_topic_with_options_with_props[]
     = "devices/my_device/modules/my_module_id/messages/events/"
       "$.sub=component_one&key=value&key_two=value2";
@@ -129,38 +124,13 @@ static void az_iot_client_telemetry_with_component_get_publish_topic_empty_span_
 
 #endif // AZ_NO_PRECONDITION_CHECKING
 
-static void az_iot_client_telemetry_with_component_get_publish_topic_no_comp_no_options_no_props_succeed(
-    void** state)
-{
-  (void)state;
-
-  az_iot_hub_client_options options = az_iot_hub_client_options_default();
-  options.module_id = test_module_id;
-
-  az_iot_hub_client client;
-
-  assert_int_equal(
-      az_iot_hub_client_init(&client, test_device_hostname, test_device_id, &options),
-      AZ_OK);
-
-  char test_buf[TEST_SPAN_BUFFER_SIZE];
-  size_t test_length;
-
-  assert_true(
-      az_iot_client_telemetry_with_component_get_publish_topic(
-          &client, AZ_SPAN_EMPTY, NULL, test_buf, sizeof(test_buf), &test_length)
-      == AZ_OK);
-  assert_string_equal(g_test_correct_topic_no_comp_no_options_no_props, test_buf);
-  assert_int_equal(sizeof(g_test_correct_topic_no_comp_no_options_no_props) - 1, test_length);
-}
-
 static void az_iot_client_telemetry_with_component_get_publish_topic_no_options_no_props_succeed(
     void** state)
 {
   (void)state;
 
   az_iot_hub_client_options options = az_iot_hub_client_options_default();
-  options.module_id = test_module_id;
+  options.model_id = test_model_id;
 
   az_iot_hub_client client;
 
@@ -204,40 +174,6 @@ static void az_iot_client_telemetry_with_component_get_publish_topic_with_option
 
   assert_string_equal(g_test_correct_topic_with_options_no_props, test_buf);
   assert_int_equal(sizeof(g_test_correct_topic_with_options_no_props) - 1, test_length);
-}
-
-static void
-az_iot_client_telemetry_with_component_get_publish_topic_no_comp_with_options_with_props_succeed(
-    void** state)
-{
-  (void)state;
-
-  az_iot_hub_client_options options = az_iot_hub_client_options_default();
-  options.module_id = test_module_id;
-  options.model_id = test_model_id;
-
-  az_iot_hub_client client;
-  assert_int_equal(
-      az_iot_hub_client_init(
-          &client, test_device_hostname, test_device_id, &options),
-      AZ_OK);
-
-  az_iot_message_properties props;
-  assert_int_equal(
-      az_iot_message_properties_init(
-          &props, AZ_SPAN_FROM_BUFFER(test_props_buffer), (int32_t)strlen(TEST_PROPS_STR)),
-      AZ_OK);
-
-  char test_buf[TEST_SPAN_BUFFER_SIZE];
-  size_t test_length;
-
-  assert_true(
-      az_iot_client_telemetry_with_component_get_publish_topic(
-          &client, AZ_SPAN_EMPTY, &props, test_buf, sizeof(test_buf), &test_length)
-      == AZ_OK);
-
-  assert_string_equal(g_test_correct_topic_no_comp_with_options_with_props, test_buf);
-  assert_int_equal(sizeof(g_test_correct_topic_no_comp_with_options_with_props) - 1, test_length);
 }
 
 static void az_iot_client_telemetry_with_component_get_publish_topic_with_options_with_props_succeed(
@@ -476,13 +412,9 @@ int test_az_iot_hub_client_telemetry_with_component()
     cmocka_unit_test(az_iot_client_telemetry_with_component_get_publish_topic_NULL_out_mqtt_topic_fails),
 #endif // AZ_NO_PRECONDITION_CHECKING
     cmocka_unit_test(
-        az_iot_client_telemetry_with_component_get_publish_topic_no_comp_no_options_no_props_succeed),
-    cmocka_unit_test(
         az_iot_client_telemetry_with_component_get_publish_topic_no_options_no_props_succeed),
     cmocka_unit_test(
         az_iot_client_telemetry_with_component_get_publish_topic_with_options_no_props_succeed),
-    cmocka_unit_test(
-        az_iot_client_telemetry_with_component_get_publish_topic_no_comp_with_options_with_props_succeed),
     cmocka_unit_test(
         az_iot_client_telemetry_with_component_get_publish_topic_with_options_with_props_succeed),
     cmocka_unit_test(
