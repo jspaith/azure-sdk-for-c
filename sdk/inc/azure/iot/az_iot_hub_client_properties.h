@@ -91,14 +91,14 @@ AZ_NODISCARD az_result az_iot_hub_client_property_builder_end_component(
  *
  * **Without component**
  * @code
- * //{
- * //  "<property_name>":{
- * //    "ac": <ack_code>,
- * //    "av": <ack_version>,
- * //    "ad": "<ack_description>",
- * //    "value": <user_value>
- * //  }
- * //}
+ * {
+ *   "<property_name>":{
+ *     "ac": <ack_code>,
+ *     "av": <ack_version>,
+ *     "ad": "<ack_description>",
+ *     "value": <user_value>
+ *   }
+ * }
  * @endcode
  *
  *
@@ -116,17 +116,17 @@ AZ_NODISCARD az_result az_iot_hub_client_property_builder_end_component(
  * az_iot_hub_client_property_builder_end_response_status()
  * az_iot_hub_client_property_builder_end_component()
  *
- * //{
- * //  "<component_name>": {
- * //    "__t": "c",
- * //    "<property_name>": {
- * //      "ac": <ack_code>,
- * //      "av": <ack_version>,
- * //      "ad": "<ack_description>",
- * //      "value": <user_value>
- * //    }
- * //  }
- * //}
+ * {
+ *   "<component_name>": {
+ *     "__t": "c",
+ *     "<property_name>": {
+ *       "ac": <ack_code>,
+ *       "av": <ack_version>,
+ *       "ad": "<ack_description>",
+ *       "value": <user_value>
+ *     }
+ *   }
+ * }
  * @endcode
  *
  * @note This API should be used in conjunction with

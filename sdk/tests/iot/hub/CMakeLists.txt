@@ -19,7 +19,7 @@ add_cmocka_test(az_iot_hub_test SOURCES
                 test_az_iot_hub_client_methods.c
                 test_az_iot_pnp_client_telemetry_component.c
                 test_az_iot_hub_client_commands.c
-                test_az_iot_hub_client_property.c
+                test_az_iot_hub_client_properties.c
                 COMPILE_OPTIONS ${DEFAULT_C_COMPILE_FLAGS} ${NO_CLOBBERED_WARNING}
                 LINK_LIBRARIES ${CMOCKA_LIBRARIES}
                     az_iot_common
