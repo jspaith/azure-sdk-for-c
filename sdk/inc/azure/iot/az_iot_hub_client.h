@@ -321,35 +321,6 @@ AZ_NODISCARD az_result az_iot_hub_client_telemetry_get_publish_topic(
     size_t mqtt_topic_size,
     size_t* out_mqtt_topic_length);
 
-/**
- * @brief Gets the MQTT topic that is used for device to cloud telemetry messages.
- * @note This topic can also be used to set the MQTT Will message in the Connect message.
- *
- * @param[in] client The #az_iot_hub_client to use for this call.
- * @param[in] component_name An #az_span specifying the component name to publish telemetry on. Can
- * be #AZ_SPAN_EMPTY if the telemetry is not for a component.
- * @param[in] properties Properties to attach to append to the topic.
- * @param[out] mqtt_topic A buffer with sufficient capacity to hold the MQTT topic. If successful,
- * contains a null-terminated string with the topic that needs to be passed to the MQTT client.
- * @param[in] mqtt_topic_size The size, in bytes, of \p mqtt_topic.
- * @param[out] out_mqtt_topic_length __[nullable]__ Contains the string length, in bytes, of \p
- * mqtt_topic. Can be `NULL`.
- *
- * @pre \p client must not be `NULL`.
- * @pre \p mqtt_topic must not be `NULL`.
- * @pre \p mqtt_topic_size must be greater than 0.
- *
- * @return An #az_result value indicating the result of the operation.
- * @retval #AZ_OK The topic was retrieved successfully.
- */
-AZ_NODISCARD az_result az_iot_client_telemetry_with_component_get_publish_topic(
-    az_iot_hub_client const* client,
-    az_span component_name,
-    az_iot_message_properties* properties,
-    char* mqtt_topic,
-    size_t mqtt_topic_size,
-    size_t* out_mqtt_topic_length);
-
 /*
  *
  * Cloud-to-device (C2D) APIs

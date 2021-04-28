@@ -943,12 +943,26 @@ static void handle_command_request(
 
 static void send_telemetry_messages(void)
 {
+  unsigned char properties_buffer[64]; // TODO: magic # in code, fix.
+  az_span properties_span = az_span_create(properties_buffer, sizeof(properties_buffer));
+  az_iot_message_properties properties;
+
+  az_result rc = az_iot_message_properties_init(
+      &properties,
+      properties_span,
+      0);
+  IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Unable to allocate properties");
+
+  rc = az_iot_message_properties_append_component_name(
+      &properties,
+      thermostat_1.component_name);
+  IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Unable to append properties");
+
   // Temperature Sensor 1
   // Get the telemetry topic to publish the telemetry message.
-  az_result rc = az_iot_client_telemetry_with_component_get_publish_topic(
+  rc = az_iot_hub_client_telemetry_get_publish_topic(
       &hub_client,
-      thermostat_1.component_name,
-      NULL,
+      &properties,
       publish_message.topic,
       publish_message.topic_length,
       NULL);
@@ -966,9 +980,19 @@ static void send_telemetry_messages(void)
 
   // Temperature Sensor 2
   // Get the telemetry topic to publish the telemetry message.
-  rc = az_iot_client_telemetry_with_component_get_publish_topic(
+  rc = az_iot_message_properties_init(
+        &properties,
+        properties_span,
+        0);
+  IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Unable to allocate properties");
+
+  rc = az_iot_message_properties_append_component_name(
+      &properties,
+      thermostat_2.component_name);
+  IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Unable to append properties");
+
+  rc = az_iot_hub_client_telemetry_get_publish_topic(
       &hub_client,
-      thermostat_2.component_name,
       NULL,
       publish_message.topic,
       publish_message.topic_length,
@@ -987,8 +1011,8 @@ static void send_telemetry_messages(void)
 
   // Temperature Controller
   // Get the telemetry topic to publish the telemetry message.
-  rc = az_iot_client_telemetry_with_component_get_publish_topic(
-      &hub_client, AZ_SPAN_EMPTY, NULL, publish_message.topic, publish_message.topic_length, NULL);
+  rc = az_iot_hub_client_telemetry_get_publish_topic(
+      &hub_client, NULL, publish_message.topic, publish_message.topic_length, NULL);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Failed to get the telemetry topic");
 
   // Build the telemetry message.

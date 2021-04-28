@@ -1,3 +1,7 @@
+// NOTE: THIS FILE IS PROBABLY GOING TO BE DELETED IN FAVOR OF
+// az_iot_message_properties_append_component_name which is a more natural
+// AND much smaller way to do this.
+
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // SPDX-License-Identifier: MIT
 

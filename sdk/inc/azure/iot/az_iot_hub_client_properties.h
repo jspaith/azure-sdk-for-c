@@ -38,8 +38,10 @@
  * }
  * @endcode
  *
- * @note This API should be used in conjunction with
- * az_iot_hub_client_property_builder_end_component().
+ * @note This API only builds the metadata for a component's properties.  The
+ * application itself must specify the payload contents between calls
+ * to this API and az_iot_hub_client_property_builder_end_component() using 
+ * \p ref_json_writer to specify the JSON payload.
  *
  * @param[in] client The #az_iot_hub_client to use for this call.
  * @param[in,out] ref_json_writer The #az_json_writer to append the necessary characters for an IoT
@@ -80,7 +82,7 @@ AZ_NODISCARD az_result az_iot_hub_client_property_builder_end_component(
     az_json_writer* ref_json_writer);
 
 /**
- * @brief Begin a property response payload with confirmation status.
+ * @brief Begin a property response to a writeable property request from the service.
  *
  * This API should be used in response to an incoming writeable property. More details can be found
  * here:
@@ -101,21 +103,8 @@ AZ_NODISCARD az_result az_iot_hub_client_property_builder_end_component(
  * }
  * @endcode
  *
- *
- * To send a status for a property belonging to a component, first call the
- * az_iot_hub_client_property_builder_begin_component() API to prefix the payload with the
- * necessary identification. The API call flow would look like the following with the listed JSON
- * payload being generated.
- *
  * **With component**
  * @code
- *
- * az_iot_hub_client_property_builder_begin_component()
- * az_iot_hub_client_property_builder_begin_response_status()
- * // Append user value here (<user_value>) using ref_json_writer directly.
- * az_iot_hub_client_property_builder_end_response_status()
- * az_iot_hub_client_property_builder_end_component()
- *
  * {
  *   "<component_name>": {
  *     "__t": "c",
@@ -129,12 +118,23 @@ AZ_NODISCARD az_result az_iot_hub_client_property_builder_end_component(
  * }
  * @endcode
  *
- * @note This API should be used in conjunction with
- * az_iot_hub_client_property_builder_end_response_status().
+ * To send a status for a property belonging to a component, first call the
+ * az_iot_hub_client_property_builder_begin_component() API to prefix the payload with the
+ * necessary identification. The API call flow would look like the following with the listed JSON
+ * payload being generated.
+ *
+ * @code
+ * az_iot_hub_client_property_builder_begin_component()
+ * az_iot_hub_client_property_builder_begin_response_status()
+ * // Append user value here (<user_value>) using ref_json_writer directly.
+ * az_iot_hub_client_property_builder_end_response_status()
+ * az_iot_hub_client_property_builder_end_component()
+ * @endcode
  *
  * @note This API only builds the metadata for the property response.  The
- * application itself must specify the payload contents (// Append user value
- * here, from above).
+ * application itself must specify the payload contents between calls
+ * to this API and az_iot_hub_client_property_builder_end_response_status() using 
+ * \p ref_json_writer to specify the JSON payload.
  *
  * @param[in] client The #az_iot_hub_client to use for this call.
  * @param[in,out] ref_json_writer The initialized #az_json_writer to append data to.
@@ -216,7 +216,9 @@ AZ_NODISCARD az_result az_iot_hub_client_property_get_property_version(
  */
 typedef enum
 {
+  /** @brief Property was originally reported from the device. */
   AZ_IOT_HUB_CLIENT_PROPERTY_REPORTED_FROM_DEVICE = 1,
+  /** @brief Property was received from the service. */
   AZ_IOT_HUB_CLIENT_PROPERTY_WRITEABLE = 2
 } az_iot_hub_client_property_type;
 
@@ -242,7 +244,8 @@ typedef enum
  *       &hub_client, &jr, response_type, property_type, &component_name)))
  * {
  *   // Check if property is of interest (substitute user_property for your own property name)
- *   if (az_json_token_is_text_equal(&jr.token, user_property))
+ *   if ((property_type == AZ_IOT_HUB_CLIENT_PROPERTY_WRITEABLE) &&
+         (az_json_token_is_text_equal(&jr.token, user_property)))
  *   {
  *     az_json_reader_next_token(&jr);
  *
