@@ -4,13 +4,13 @@
 /**
  * @file
  *
- * @brief Definition for the Azure IoT Plug and Play device SDK.
+ * @brief Definition for the Azure IoT Plug and Play property builder and parsing routines.
  *
  * @warning THIS LIBRARY IS IN PREVIEW. APIS ARE SUBJECT TO CHANGE UNTIL GENERAL AVAILABILITY.
  */
 
-#ifndef _az_IOT_PROPERTY_FORMAT_H
-#define _az_IOT_PROPERTY_FORMAT_H
+#ifndef _az_IOT_HUB_CLIENT_PROPERTIES_H
+#define _az_IOT_HUB_CLIENT_PROPERTIES_H
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -83,7 +83,7 @@ AZ_NODISCARD az_result az_iot_hub_client_property_builder_end_component(
 /**
  * @brief Begin a property response payload with confirmation status.
  *
- * This API should be used in response to an incoming desired property. More details can be found
+ * This API should be used in response to an incoming writeable property. More details can be found
  * here:
  *
  * https://docs.microsoft.com/en-us/azure/iot-pnp/concepts-convention#writable-properties
@@ -102,6 +102,7 @@ AZ_NODISCARD az_result az_iot_hub_client_property_builder_end_component(
  * //}
  * @endcode
  *
+ * 
  * To send a status for a property belonging to a component, first call the
  * az_iot_hub_client_property_builder_begin_component() API to prefix the payload with the
  * necessary identification. The API call flow would look like the following with the listed JSON
@@ -111,9 +112,9 @@ AZ_NODISCARD az_result az_iot_hub_client_property_builder_end_component(
  * @code
  *
  * az_iot_hub_client_property_builder_begin_component()
- * az_iot_hub_client_property_builder_begin_reported_status()
- * // Append user value here (<user_value>)
- * az_iot_hub_client_property_builder_end_reported_status()
+ * az_iot_hub_client_property_builder_begin_response_status()
+ * // Append user value here (<user_value>) using ref_json_writer directly.
+ * az_iot_hub_client_property_builder_end_response_status()
  * az_iot_hub_client_property_builder_end_component()
  *
  * //{
@@ -130,7 +131,11 @@ AZ_NODISCARD az_result az_iot_hub_client_property_builder_end_component(
  * @endcode
  *
  * @note This API should be used in conjunction with
- * az_iot_hub_client_property_builder_end_reported_status().
+ * az_iot_hub_client_property_builder_end_response_status().
+ *
+ * @note This API only builds the metadata for the property response.  The 
+ * application itself must specify the payload contents (// Append user value 
+ * here, from above).
  *
  * @param[in] client The #az_iot_hub_client to use for this call.
  * @param[in,out] ref_json_writer The initialized #az_json_writer to append data to.
@@ -138,6 +143,8 @@ AZ_NODISCARD az_result az_iot_hub_client_property_builder_end_component(
  * @param[in] ack_code The HTTP-like status code to respond with. See #az_iot_status for
  * possible supported values.
  * @param[in] ack_version The version of the property the application is acknowledging.
+ * This can be retrieved from the service request by 
+ * calling az_iot_hub_client_property_get_property_version.
  * @param[in] ack_description An optional description detailing the context or any details about
  * the acknowledgement. This can be #AZ_SPAN_EMPTY.
  *
@@ -148,7 +155,7 @@ AZ_NODISCARD az_result az_iot_hub_client_property_builder_end_component(
  * @return An #az_result value indicating the result of the operation.
  * @retval #AZ_OK The JSON payload was prefixed successfully.
  */
-AZ_NODISCARD az_result az_iot_hub_client_property_builder_begin_reported_status(
+AZ_NODISCARD az_result az_iot_hub_client_property_builder_begin_response_status(
     az_iot_hub_client const* client,
     az_json_writer* ref_json_writer,
     az_span property_name,
@@ -160,7 +167,7 @@ AZ_NODISCARD az_result az_iot_hub_client_property_builder_begin_reported_status(
  * @brief End a property response payload with confirmation status.
  *
  * @note This API should be used in conjunction with
- * az_iot_hub_client_property_builder_begin_reported_status().
+ * az_iot_hub_client_property_builder_begin_response_status().
  *
  * @param[in] client The #az_iot_hub_client to use for this call.
  * @param[in,out] ref_json_writer The initialized #az_json_writer to append data to.
@@ -171,7 +178,7 @@ AZ_NODISCARD az_result az_iot_hub_client_property_builder_begin_reported_status(
  * @return An #az_result value indicating the result of the operation.
  * @retval #AZ_OK The JSON payload was suffixed successfully.
  */
-AZ_NODISCARD az_result az_iot_hub_client_property_builder_end_reported_status(
+AZ_NODISCARD az_result az_iot_hub_client_property_builder_end_response_status(
     az_iot_hub_client const* client,
     az_json_writer* ref_json_writer);
 
@@ -205,6 +212,17 @@ AZ_NODISCARD az_result az_iot_hub_client_property_get_property_version(
     int32_t* out_version);
 
 /**
+ * @brief Property type
+ *
+ */
+typedef enum
+{
+  AZ_IOT_HUB_CLIENT_PROPERTY_REPORTED_FROM_DEVICE = 1,
+  AZ_IOT_HUB_CLIENT_PROPERTY_WRITEABLE = 2
+} az_iot_hub_client_property_type;
+
+
+/**
  * @brief Iteratively read the IoT Plug and Play component properties.
  *
  * Note that between calls, the #az_span pointed to by \p out_component_name shall not be modified,
@@ -223,7 +241,7 @@ AZ_NODISCARD az_result az_iot_hub_client_property_get_property_version(
  * @code
  *
  * while (az_result_succeeded(az_iot_hub_client_property_get_next_component_property(
- *       &hub_client, &jr, response_type, &component_name)))
+ *       &hub_client, &jr, response_type, property_type, &component_name)))
  * {
  *   // Check if property is of interest (substitute user_property for your own property name)
  *   if (az_json_token_is_text_equal(&jr.token, user_property))
@@ -271,8 +289,9 @@ AZ_NODISCARD az_result az_iot_hub_client_property_get_next_component_property(
     az_iot_hub_client const* client,
     az_json_reader* ref_json_reader,
     az_iot_hub_client_property_response_type response_type,
-    az_span* out_component_name);
+    az_span* out_component_name,
+    az_iot_hub_client_property_type* property_type);
 
 #include <azure/core/_az_cfg_suffix.h>
 
-#endif //_az_IOT_PROPERTY_FORMAT_H
+#endif //_az_IOT_HUB_CLIENT_PROPERTIES_H

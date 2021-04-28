@@ -30,7 +30,7 @@
 #include <azure/core/az_json.h>
 #include <azure/core/az_result.h>
 #include <azure/core/az_span.h>
-#include <azure/iot/az_iot_hub_property_format.h>
+#include <azure/iot/az_iot_hub_client_properties.h>
 
 #include "iot_sample_common.h"
 #include "pnp/pnp_device_info_component.h"
@@ -698,6 +698,7 @@ static void process_property_message(
 
   az_json_reader jr;
   az_span component_name;
+  az_iot_hub_client_property_type property_type;
   int32_t version = 0;
   rc = az_json_reader_init(&jr, property_message_span, NULL);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Could not initialize the json reader");
@@ -710,7 +711,7 @@ static void process_property_message(
 
   while (az_result_succeeded(
       rc = az_iot_hub_client_property_get_next_component_property(
-          &hub_client, &jr, response_type, &component_name)))
+          &hub_client, &jr, response_type, &component_name, &property_type)))
   {
     if (rc == AZ_OK)
     {
@@ -784,7 +785,7 @@ static void process_property_message(
         }
 
         IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-            az_iot_hub_client_property_builder_begin_reported_status(
+            az_iot_hub_client_property_builder_begin_response_status(
                 &hub_client,
                 &jw,
                 jr.token.slice,
@@ -800,7 +801,7 @@ static void process_property_message(
             append_simple_json_token(&jw, &jr.token), "Could not append the property");
 
         IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-            az_iot_hub_client_property_builder_end_reported_status(&hub_client, &jw),
+            az_iot_hub_client_property_builder_end_response_status(&hub_client, &jw),
             "Could not end the property with status");
 
         if (az_span_size(component_name) > 0)

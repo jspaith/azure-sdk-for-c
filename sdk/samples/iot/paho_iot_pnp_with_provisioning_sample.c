@@ -29,7 +29,7 @@
 #include <azure/core/az_result.h>
 #include <azure/core/az_span.h>
 #include <azure/iot/az_iot_hub_client.h>
-#include <azure/iot/az_iot_hub_property_format.h>
+#include <azure/iot/az_iot_hub_client_properties.h>
 #include <azure/iot/az_iot_provisioning_client.h>
 
 #define SAMPLE_TYPE PAHO_IOT_PROVISIONING
@@ -882,9 +882,10 @@ static void process_device_property_message(
 
   double desired_temperature;
   az_span component_name;
+  az_iot_hub_client_property_type property_type;
 
   while (az_result_succeeded(az_iot_hub_client_property_get_next_component_property(
-      &hub_client, &jr, response_type, &component_name)))
+      &hub_client, &jr, response_type, &component_name, &property_type)))
   {
     if (az_json_token_is_text_equal(&jr.token, property_desired_temperature_name))
     {
@@ -1208,13 +1209,13 @@ static void build_property_payload_with_status(
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_init(&jw, property_payload, NULL), log);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_begin_object(&jw), log);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-      az_iot_hub_client_property_builder_begin_reported_status(
+      az_iot_hub_client_property_builder_begin_response_status(
           &hub_client, &jw, name, ack_code_value, ack_version_value, ack_description_value),
       log);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(
       az_json_writer_append_double(&jw, value, DOUBLE_DECIMAL_PLACE_DIGITS), log);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-      az_iot_hub_client_property_builder_end_reported_status(&hub_client, &jw), log);
+      az_iot_hub_client_property_builder_end_response_status(&hub_client, &jw), log);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_end_object(&jw), log);
 
   *out_property_payload = az_json_writer_get_bytes_used_in_destination(&jw);

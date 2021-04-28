@@ -32,7 +32,6 @@ add_library (az::iot::common ALIAS az_iot_common)
 set(az_iot_pnp_source_files   
   ${CMAKE_CURRENT_LIST_DIR}/az_iot_hub_client_commands.c
   ${CMAKE_CURRENT_LIST_DIR}/az_iot_hub_client_property.c
-  ${CMAKE_CURRENT_LIST_DIR}/az_iot_hub_client_property_format.c
   ${CMAKE_CURRENT_LIST_DIR}/az_iot_hub_client_telemetry_component.c
 )
 

@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-#include <azure/iot/az_iot_hub_property_format.h>
+#include <azure/iot/az_iot_hub_client_properties.h>
 
 #include <azure/core/internal/az_precondition_internal.h>
 #include <azure/core/internal/az_result_internal.h>
@@ -16,6 +16,57 @@ static const az_span property_ack_description_name = AZ_SPAN_LITERAL_FROM_STR("a
 static const az_span component_property_label_name = AZ_SPAN_LITERAL_FROM_STR("__t");
 static const az_span component_property_label_value = AZ_SPAN_LITERAL_FROM_STR("c");
 
+AZ_NODISCARD az_result az_iot_hub_client_property_patch_get_publish_topic(
+    az_iot_hub_client const* client,
+    az_span request_id,
+    char* mqtt_topic,
+    size_t mqtt_topic_size,
+    size_t* out_mqtt_topic_length)
+{
+  return az_iot_hub_client_twin_patch_get_publish_topic(
+      client,
+      request_id,
+      mqtt_topic,
+      mqtt_topic_size,
+      out_mqtt_topic_length);
+}
+
+AZ_NODISCARD az_result az_iot_hub_client_property_document_get_publish_topic(
+    az_iot_hub_client const* client,
+    az_span request_id,
+    char* mqtt_topic,
+    size_t mqtt_topic_size,
+    size_t* out_mqtt_topic_length)
+{
+  return az_iot_hub_client_twin_document_get_publish_topic(
+      client,
+      request_id,
+      mqtt_topic,
+      mqtt_topic_size,
+      out_mqtt_topic_length);
+}
+
+AZ_NODISCARD az_result az_iot_hub_client_property_parse_received_topic(
+    az_iot_hub_client const* client,
+    az_span received_topic,
+    az_iot_hub_client_property_response* out_response)
+{
+  _az_PRECONDITION_NOT_NULL(client);
+  _az_PRECONDITION_VALID_SPAN(received_topic, 1, false);
+  _az_PRECONDITION_NOT_NULL(out_response);
+
+  az_iot_hub_client_twin_response hub_twin_response;
+  _az_RETURN_IF_FAILED(az_iot_hub_client_twin_parse_received_topic(
+      client, received_topic, &hub_twin_response));
+
+  out_response->request_id = hub_twin_response.request_id;
+  out_response->response_type
+      = (az_iot_hub_client_property_response_type)hub_twin_response.response_type;
+  out_response->status = hub_twin_response.status;
+  out_response->version = hub_twin_response.version;
+
+  return AZ_OK;
+}
 
 AZ_NODISCARD az_result az_iot_hub_client_property_builder_begin_component(
     az_iot_hub_client const* client,
@@ -50,7 +101,7 @@ AZ_NODISCARD az_result az_iot_hub_client_property_builder_end_component(
   return az_json_writer_append_end_object(ref_json_writer);
 }
 
-AZ_NODISCARD az_result az_iot_hub_client_property_builder_begin_reported_status(
+AZ_NODISCARD az_result az_iot_hub_client_property_builder_begin_response_status(
     az_iot_hub_client const* client,
     az_json_writer* ref_json_writer,
     az_span property_name,
@@ -86,7 +137,7 @@ AZ_NODISCARD az_result az_iot_hub_client_property_builder_begin_reported_status(
   return AZ_OK;
 }
 
-AZ_NODISCARD az_result az_iot_hub_client_property_builder_end_reported_status(
+AZ_NODISCARD az_result az_iot_hub_client_property_builder_end_response_status(
     az_iot_hub_client const* client,
     az_json_writer* ref_json_writer)
 {
@@ -337,13 +388,16 @@ AZ_NODISCARD az_result az_iot_hub_client_property_get_next_component_property(
     az_iot_hub_client const* client,
     az_json_reader* ref_json_reader,
     az_iot_hub_client_property_response_type response_type,
-    az_span* out_component_name)
+    az_span* out_component_name,
+    az_iot_hub_client_property_type* property_type)
 {
   _az_PRECONDITION_NOT_NULL(client);
   _az_PRECONDITION_NOT_NULL(ref_json_reader);
   _az_PRECONDITION_NOT_NULL(out_component_name);
+  _az_PRECONDITION_NOT_NULL(property_type);
 
   (void)client;
+  (void)property_type;
 
   if (is_invalid_json_position(ref_json_reader, response_type, *out_component_name))
   {

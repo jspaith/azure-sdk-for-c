@@ -8,7 +8,7 @@
 #endif
 
 #include <azure/iot/az_iot_hub_client.h>
-#include <azure/iot/az_iot_hub_property_format.h>
+#include <azure/iot/az_iot_hub_client_properties.h>
 
 #include <iot_sample_common.h>
 
@@ -295,7 +295,7 @@ az_result pnp_thermostat_process_property_update(
             hub_client, &jw, ref_thermostat_component->component_name),
         property_log);
     IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-        az_iot_hub_client_property_builder_begin_reported_status(
+        az_iot_hub_client_property_builder_begin_response_status(
             hub_client,
             &jw,
             property_name_span,
@@ -307,7 +307,7 @@ az_result pnp_thermostat_process_property_update(
         az_json_writer_append_double(&jw, parsed_property_value, DOUBLE_DECIMAL_PLACE_DIGITS),
         property_log);
     IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-        az_iot_hub_client_property_builder_end_reported_status(hub_client, &jw), property_log);
+        az_iot_hub_client_property_builder_end_response_status(hub_client, &jw), property_log);
     IOT_SAMPLE_EXIT_IF_AZ_FAILED(
         az_iot_hub_client_property_builder_end_component(hub_client, &jw), property_log);
 
