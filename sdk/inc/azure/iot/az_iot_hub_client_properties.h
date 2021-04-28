@@ -23,7 +23,6 @@
 
 #include <azure/core/_az_cfg_prefix.h>
 
-
 /**
  * @brief Append the necessary characters to a reported property JSON payload belonging to a
  * component.
@@ -102,7 +101,7 @@ AZ_NODISCARD az_result az_iot_hub_client_property_builder_end_component(
  * //}
  * @endcode
  *
- * 
+ *
  * To send a status for a property belonging to a component, first call the
  * az_iot_hub_client_property_builder_begin_component() API to prefix the payload with the
  * necessary identification. The API call flow would look like the following with the listed JSON
@@ -133,8 +132,8 @@ AZ_NODISCARD az_result az_iot_hub_client_property_builder_end_component(
  * @note This API should be used in conjunction with
  * az_iot_hub_client_property_builder_end_response_status().
  *
- * @note This API only builds the metadata for the property response.  The 
- * application itself must specify the payload contents (// Append user value 
+ * @note This API only builds the metadata for the property response.  The
+ * application itself must specify the payload contents (// Append user value
  * here, from above).
  *
  * @param[in] client The #az_iot_hub_client to use for this call.
@@ -143,7 +142,7 @@ AZ_NODISCARD az_result az_iot_hub_client_property_builder_end_component(
  * @param[in] ack_code The HTTP-like status code to respond with. See #az_iot_status for
  * possible supported values.
  * @param[in] ack_version The version of the property the application is acknowledging.
- * This can be retrieved from the service request by 
+ * This can be retrieved from the service request by
  * calling az_iot_hub_client_property_get_property_version.
  * @param[in] ack_description An optional description detailing the context or any details about
  * the acknowledgement. This can be #AZ_SPAN_EMPTY.
@@ -220,7 +219,6 @@ typedef enum
   AZ_IOT_HUB_CLIENT_PROPERTY_REPORTED_FROM_DEVICE = 1,
   AZ_IOT_HUB_CLIENT_PROPERTY_WRITEABLE = 2
 } az_iot_hub_client_property_type;
-
 
 /**
  * @brief Iteratively read the IoT Plug and Play component properties.

@@ -24,11 +24,7 @@ AZ_NODISCARD az_result az_iot_hub_client_property_patch_get_publish_topic(
     size_t* out_mqtt_topic_length)
 {
   return az_iot_hub_client_twin_patch_get_publish_topic(
-      client,
-      request_id,
-      mqtt_topic,
-      mqtt_topic_size,
-      out_mqtt_topic_length);
+      client, request_id, mqtt_topic, mqtt_topic_size, out_mqtt_topic_length);
 }
 
 AZ_NODISCARD az_result az_iot_hub_client_property_document_get_publish_topic(
@@ -39,11 +35,7 @@ AZ_NODISCARD az_result az_iot_hub_client_property_document_get_publish_topic(
     size_t* out_mqtt_topic_length)
 {
   return az_iot_hub_client_twin_document_get_publish_topic(
-      client,
-      request_id,
-      mqtt_topic,
-      mqtt_topic_size,
-      out_mqtt_topic_length);
+      client, request_id, mqtt_topic, mqtt_topic_size, out_mqtt_topic_length);
 }
 
 AZ_NODISCARD az_result az_iot_hub_client_property_parse_received_topic(
@@ -56,8 +48,8 @@ AZ_NODISCARD az_result az_iot_hub_client_property_parse_received_topic(
   _az_PRECONDITION_NOT_NULL(out_response);
 
   az_iot_hub_client_twin_response hub_twin_response;
-  _az_RETURN_IF_FAILED(az_iot_hub_client_twin_parse_received_topic(
-      client, received_topic, &hub_twin_response));
+  _az_RETURN_IF_FAILED(
+      az_iot_hub_client_twin_parse_received_topic(client, received_topic, &hub_twin_response));
 
   out_response->request_id = hub_twin_response.request_id;
   out_response->response_type

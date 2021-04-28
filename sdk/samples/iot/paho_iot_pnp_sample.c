@@ -258,8 +258,7 @@ static void create_and_configure_mqtt_client(void)
   az_iot_hub_client_options options = az_iot_hub_client_options_default();
   options.model_id = model_id;
 
-  rc = az_iot_hub_client_init(
-      &hub_client, env_vars.hub_hostname, env_vars.hub_device_id, &options);
+  rc = az_iot_hub_client_init(&hub_client, env_vars.hub_hostname, env_vars.hub_device_id, &options);
   if (az_result_failed(rc))
   {
     IOT_SAMPLE_LOG_ERROR("Failed to initialize hub client: az_result return code 0x%08x.", rc);

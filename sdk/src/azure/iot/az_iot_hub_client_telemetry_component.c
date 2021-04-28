@@ -35,8 +35,7 @@ AZ_NODISCARD az_result az_iot_client_telemetry_with_component_get_publish_topic(
 
   az_span mqtt_topic_span = az_span_create((uint8_t*)mqtt_topic, (int32_t)mqtt_topic_size);
   int32_t required_length = az_span_size(telemetry_topic_prefix)
-      + az_span_size(client->_internal.device_id)
-      + az_span_size(telemetry_topic_suffix);
+      + az_span_size(client->_internal.device_id) + az_span_size(telemetry_topic_suffix);
   int32_t module_id_length = az_span_size(*module_id);
   if (module_id_length > 0)
   {
@@ -44,7 +43,7 @@ AZ_NODISCARD az_result az_iot_client_telemetry_with_component_get_publish_topic(
   }
 
   required_length += az_span_size(telemetry_component_prop_span) + az_span_size(component_name)
-    + 1; // One for `=`
+      + 1; // One for `=`
   if (properties != NULL)
   {
     required_length++; // For `&`
@@ -95,4 +94,3 @@ AZ_NODISCARD az_result az_iot_client_telemetry_with_component_get_publish_topic(
 
   return AZ_OK;
 }
-    

@@ -60,7 +60,7 @@ typedef struct
    * The array of component names for this device.
    */
   az_span* component_names;
-    
+
   /**
    * The number of component names in the `component_names` array.
    */
@@ -429,7 +429,6 @@ typedef struct
   az_span name;
 } az_iot_hub_client_method_request;
 
-
 /**
  * @brief A command request received from IoT Hub.
  *
@@ -453,7 +452,6 @@ typedef struct
    */
   az_span command_name;
 } az_iot_hub_client_command_request;
-
 
 /**
  * @brief Attempts to parse a received message's topic for method features.
@@ -537,7 +535,6 @@ AZ_NODISCARD az_result az_iot_hub_client_commands_response_get_publish_topic(
     size_t mqtt_topic_size,
     size_t* out_mqtt_topic_length);
 
-
 /**
  * @brief Attempts to parse a received message's topic.
  *
@@ -562,7 +559,6 @@ AZ_NODISCARD az_result az_iot_hub_client_commands_parse_received_topic(
     az_iot_hub_client const* client,
     az_span received_topic,
     az_iot_hub_client_command_request* out_request);
-
 
 /*
  *
@@ -704,7 +700,6 @@ AZ_NODISCARD az_result az_iot_hub_client_twin_patch_get_publish_topic(
     char* mqtt_topic,
     size_t mqtt_topic_size,
     size_t* out_mqtt_topic_length);
-
 
 #define AZ_IOT_HUB_CLIENT_PROPERTY_RESPONSE_SUBSCRIBE_TOPIC "$iothub/twin/res/#"
 

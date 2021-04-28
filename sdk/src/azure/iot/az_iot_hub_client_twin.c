@@ -27,7 +27,6 @@ static const az_span az_iot_hub_twin_patch_pub_topic
 static const az_span az_iot_hub_twin_patch_sub_topic
     = AZ_SPAN_LITERAL_FROM_STR("PATCH/properties/desired/");
 
-
 AZ_NODISCARD az_result az_iot_hub_client_twin_document_get_publish_topic(
     az_iot_hub_client const* client,
     az_span request_id,
@@ -214,4 +213,3 @@ AZ_NODISCARD az_result az_iot_hub_client_twin_parse_received_topic(
 
   return result;
 }
-

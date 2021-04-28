@@ -28,12 +28,7 @@ AZ_NODISCARD az_result az_iot_hub_client_commands_response_get_publish_topic(
     size_t* out_mqtt_topic_length)
 {
   return az_iot_hub_client_methods_response_get_publish_topic(
-      client,
-      request_id,
-      status,
-      mqtt_topic,
-      mqtt_topic_size,
-      out_mqtt_topic_length);
+      client, request_id, status, mqtt_topic, mqtt_topic_size, out_mqtt_topic_length);
 }
 
 AZ_NODISCARD az_result az_iot_hub_client_commands_parse_received_topic(
@@ -93,4 +88,3 @@ AZ_NODISCARD az_result az_iot_hub_client_commands_parse_received_topic(
 
   return AZ_OK;
 }
-
