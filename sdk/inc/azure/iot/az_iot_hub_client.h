@@ -829,8 +829,6 @@ AZ_NODISCARD az_result az_iot_hub_client_property_patch_get_publish_topic(
     size_t mqtt_topic_size,
     size_t* out_mqtt_topic_length);
 
-
-
 #include <azure/core/_az_cfg_suffix.h>
 
 #endif // _az_IOT_HUB_CLIENT_H
