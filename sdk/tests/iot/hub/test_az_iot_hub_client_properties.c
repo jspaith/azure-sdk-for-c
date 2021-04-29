@@ -196,7 +196,7 @@ static void test_az_iot_hub_client_properties_document_get_publish_topic_NULL_cl
   char test_buf[TEST_SPAN_BUFFER_SIZE];
   size_t test_length;
 
-  ASSERT_PRECONDITION_CHECKED(az_iot_hub_client_property_document_get_publish_topic(
+  ASSERT_PRECONDITION_CHECKED(az_iot_hub_client_properties_document_get_publish_topic(
       NULL, test_device_request_id, test_buf, sizeof(test_buf), &test_length));
 }
 
@@ -217,7 +217,7 @@ static void test_az_iot_hub_client_properties_document_get_publish_topic_NULL_re
       = az_span_create(test_bad_request_id_buf, _az_COUNTOF(test_bad_request_id_buf));
   test_bad_request_id._internal.ptr = NULL;
 
-  ASSERT_PRECONDITION_CHECKED(az_iot_hub_client_property_document_get_publish_topic(
+  ASSERT_PRECONDITION_CHECKED(az_iot_hub_client_properties_document_get_publish_topic(
       &client, test_bad_request_id, test_buf, sizeof(test_buf), &test_length));
 }
 
@@ -233,7 +233,7 @@ static void test_az_iot_hub_client_properties_document_get_publish_topic_NULL_sp
   char test_buf[TEST_SPAN_BUFFER_SIZE];
   size_t test_length;
 
-  ASSERT_PRECONDITION_CHECKED(az_iot_hub_client_property_document_get_publish_topic(
+  ASSERT_PRECONDITION_CHECKED(az_iot_hub_client_properties_document_get_publish_topic(
       &client, test_device_request_id, NULL, sizeof(test_buf), &test_length));
 }
 
@@ -249,7 +249,7 @@ static void test_az_iot_hub_client_properties_document_get_publish_topic_NULL_ou
   char test_buf[TEST_SPAN_BUFFER_SIZE];
   size_t test_length;
 
-  ASSERT_PRECONDITION_CHECKED(az_iot_hub_client_property_document_get_publish_topic(
+  ASSERT_PRECONDITION_CHECKED(az_iot_hub_client_properties_document_get_publish_topic(
       &client, test_device_request_id, test_buf, 0, &test_length));
 }
 
@@ -258,7 +258,7 @@ static void test_az_iot_hub_client_properties_patch_get_publish_topic_NULL_clien
   char test_buf[TEST_SPAN_BUFFER_SIZE];
   size_t test_length;
 
-  ASSERT_PRECONDITION_CHECKED(az_iot_hub_client_property_patch_get_publish_topic(
+  ASSERT_PRECONDITION_CHECKED(az_iot_hub_client_properties_patch_get_publish_topic(
       NULL, test_device_request_id, test_buf, sizeof(test_buf), &test_length));
 }
 
@@ -279,7 +279,7 @@ static void test_az_iot_hub_client_properties_patch_get_publish_topic_invalid_re
       = az_span_create(test_bad_request_id_buf, _az_COUNTOF(test_bad_request_id_buf));
   test_bad_request_id._internal.ptr = NULL;
 
-  ASSERT_PRECONDITION_CHECKED(az_iot_hub_client_property_patch_get_publish_topic(
+  ASSERT_PRECONDITION_CHECKED(az_iot_hub_client_properties_patch_get_publish_topic(
       &client, test_bad_request_id, test_buf, sizeof(test_buf), &test_length));
 }
 
@@ -295,7 +295,7 @@ static void test_az_iot_hub_client_properties_patch_get_publish_topic_NULL_char_
   char test_buf[TEST_SPAN_BUFFER_SIZE];
   size_t test_length;
 
-  ASSERT_PRECONDITION_CHECKED(az_iot_hub_client_property_patch_get_publish_topic(
+  ASSERT_PRECONDITION_CHECKED(az_iot_hub_client_properties_patch_get_publish_topic(
       &client, test_device_request_id, NULL, sizeof(test_buf), &test_length));
 }
 
@@ -311,15 +311,15 @@ static void test_az_iot_hub_client_properties_patch_get_publish_topic_NULL_out_s
   char test_buf[TEST_SPAN_BUFFER_SIZE];
   size_t test_length;
 
-  ASSERT_PRECONDITION_CHECKED(az_iot_hub_client_property_patch_get_publish_topic(
+  ASSERT_PRECONDITION_CHECKED(az_iot_hub_client_properties_patch_get_publish_topic(
       &client, test_device_request_id, test_buf, 0, &test_length));
 }
 
 static void test_az_iot_hub_client_properties_parse_received_topic_NULL_client_fails()
 {
-  az_iot_hub_client_property_response response;
+  az_iot_hub_client_properties_response response;
 
-  ASSERT_PRECONDITION_CHECKED(az_iot_hub_client_property_parse_received_topic(
+  ASSERT_PRECONDITION_CHECKED(az_iot_hub_client_properties_parse_received_topic(
       NULL, test_property_received_topic_desired_success, &response));
 }
 
@@ -332,10 +332,10 @@ static void test_az_iot_hub_client_properties_parse_received_topic_NULL_rec_topi
   assert_int_equal(
       az_iot_hub_client_init(&client, test_device_hostname, test_device_id, &options), AZ_OK);
 
-  az_iot_hub_client_property_response response;
+  az_iot_hub_client_properties_response response;
 
   ASSERT_PRECONDITION_CHECKED(
-      az_iot_hub_client_property_parse_received_topic(&client, AZ_SPAN_EMPTY, &response));
+      az_iot_hub_client_properties_parse_received_topic(&client, AZ_SPAN_EMPTY, &response));
 }
 
 static void test_az_iot_hub_client_properties_parse_received_topic_NULL_response_fails()
@@ -347,7 +347,7 @@ static void test_az_iot_hub_client_properties_parse_received_topic_NULL_response
   assert_int_equal(
       az_iot_hub_client_init(&client, test_device_hostname, test_device_id, &options), AZ_OK);
 
-  ASSERT_PRECONDITION_CHECKED(az_iot_hub_client_property_parse_received_topic(
+  ASSERT_PRECONDITION_CHECKED(az_iot_hub_client_properties_parse_received_topic(
       &client, test_property_received_topic_desired_success, NULL));
 }
 
@@ -355,7 +355,7 @@ static void test_az_iot_hub_client_properties_builder_begin_component_NULL_clien
 {
   az_json_writer jw;
   ASSERT_PRECONDITION_CHECKED(
-      az_iot_hub_client_property_builder_begin_component(NULL, &jw, test_component_one));
+      az_iot_hub_client_properties_builder_begin_component(NULL, &jw, test_component_one));
 }
 
 static void test_az_iot_hub_client_properties_builder_begin_component_NULL_jw_fails()
@@ -368,7 +368,7 @@ static void test_az_iot_hub_client_properties_builder_begin_component_NULL_jw_fa
       az_iot_hub_client_init(&client, test_device_hostname, test_device_id, &options), AZ_OK);
 
   ASSERT_PRECONDITION_CHECKED(
-      az_iot_hub_client_property_builder_begin_component(&client, NULL, test_component_one));
+      az_iot_hub_client_properties_builder_begin_component(&client, NULL, test_component_one));
 }
 
 static void test_az_iot_hub_client_properties_builder_begin_component_NULL_component_name_fails()
@@ -382,13 +382,13 @@ static void test_az_iot_hub_client_properties_builder_begin_component_NULL_compo
 
   az_json_writer jw;
   ASSERT_PRECONDITION_CHECKED(
-      az_iot_hub_client_property_builder_begin_component(&client, &jw, AZ_SPAN_EMPTY));
+      az_iot_hub_client_properties_builder_begin_component(&client, &jw, AZ_SPAN_EMPTY));
 }
 
 static void test_az_iot_hub_client_properties_builder_end_component_NULL_client_fails()
 {
   az_json_writer jw;
-  ASSERT_PRECONDITION_CHECKED(az_iot_hub_client_property_builder_end_component(NULL, &jw));
+  ASSERT_PRECONDITION_CHECKED(az_iot_hub_client_properties_builder_end_component(NULL, &jw));
 }
 
 static void test_az_iot_hub_client_properties_builder_end_component_NULL_jw_fails()
@@ -400,7 +400,7 @@ static void test_az_iot_hub_client_properties_builder_end_component_NULL_jw_fail
   assert_int_equal(
       az_iot_hub_client_init(&client, test_device_hostname, test_device_id, &options), AZ_OK);
 
-  ASSERT_PRECONDITION_CHECKED(az_iot_hub_client_property_builder_end_component(&client, NULL));
+  ASSERT_PRECONDITION_CHECKED(az_iot_hub_client_properties_builder_end_component(&client, NULL));
 }
 
 #endif // AZ_NO_PRECONDITION_CHECKING
@@ -418,7 +418,7 @@ static void test_az_iot_hub_client_properties_document_get_publish_topic_succeed
   size_t test_length;
 
   assert_int_equal(
-      az_iot_hub_client_property_document_get_publish_topic(
+      az_iot_hub_client_properties_document_get_publish_topic(
           &client, test_device_request_id, test_buf, sizeof(test_buf), &test_length),
       AZ_OK);
   assert_string_equal(test_correct_property_get_request_topic, test_buf);
@@ -438,7 +438,7 @@ static void test_az_iot_hub_client_properties_document_get_publish_topic_small_b
   size_t test_length;
 
   assert_int_equal(
-      az_iot_hub_client_property_document_get_publish_topic(
+      az_iot_hub_client_properties_document_get_publish_topic(
           &client, test_device_request_id, test_buf, sizeof(test_buf), &test_length),
       AZ_ERROR_NOT_ENOUGH_SPACE);
 }
@@ -456,7 +456,7 @@ static void test_az_iot_hub_client_properties_patch_get_publish_topic_succeed()
   size_t test_length;
 
   assert_int_equal(
-      az_iot_hub_client_property_patch_get_publish_topic(
+      az_iot_hub_client_properties_patch_get_publish_topic(
           &client, test_device_request_id, test_buf, sizeof(test_buf), &test_length),
       AZ_OK);
   assert_string_equal(test_correct_property_patch_pub_topic, test_buf);
@@ -476,7 +476,7 @@ static void test_az_iot_hub_client_properties_patch_get_publish_topic_small_buff
   size_t test_length;
 
   assert_int_equal(
-      az_iot_hub_client_property_patch_get_publish_topic(
+      az_iot_hub_client_properties_patch_get_publish_topic(
           &client, test_device_request_id, test_buf, sizeof(test_buf), &test_length),
       AZ_ERROR_NOT_ENOUGH_SPACE);
 }
@@ -489,17 +489,17 @@ static void test_az_iot_hub_client_properties_parse_received_topic_desired_found
   az_iot_hub_client client;
   assert_int_equal(
       az_iot_hub_client_init(&client, test_device_hostname, test_device_id, &options), AZ_OK);
-  az_iot_hub_client_property_response response;
+  az_iot_hub_client_properties_response response;
 
   assert_int_equal(
-      az_iot_hub_client_property_parse_received_topic(
+      az_iot_hub_client_properties_parse_received_topic(
           &client, test_property_received_topic_desired_success, &response),
       AZ_OK);
   assert_true(az_span_is_content_equal((response.version), test_device_request_id));
   assert_true(az_span_is_content_equal(response.request_id, AZ_SPAN_EMPTY));
   assert_int_equal(response.status, AZ_IOT_STATUS_OK);
   assert_int_equal(
-      response.response_type, AZ_IOT_HUB_CLIENT_PROPERTY_RESPONSE_TYPE_DESIRED_PROPERTIES);
+      response.response_type, AZ_IOT_HUB_CLIENT_PROPERTIES_RESPONSE_TYPE_DESIRED_PROPERTIES);
 }
 
 static void test_az_iot_hub_client_properties_parse_received_topic_get_response_found_succeed()
@@ -510,16 +510,16 @@ static void test_az_iot_hub_client_properties_parse_received_topic_get_response_
   az_iot_hub_client client;
   assert_int_equal(
       az_iot_hub_client_init(&client, test_device_hostname, test_device_id, &options), AZ_OK);
-  az_iot_hub_client_property_response response;
+  az_iot_hub_client_properties_response response;
 
   assert_int_equal(
-      az_iot_hub_client_property_parse_received_topic(
+      az_iot_hub_client_properties_parse_received_topic(
           &client, test_property_received_get_response, &response),
       AZ_OK);
   assert_true(az_span_is_content_equal(response.request_id, test_device_request_id));
   assert_true(az_span_is_content_equal(response.version, AZ_SPAN_EMPTY));
   assert_int_equal(response.status, AZ_IOT_STATUS_OK);
-  assert_int_equal(response.response_type, AZ_IOT_HUB_CLIENT_PROPERTY_RESPONSE_TYPE_GET);
+  assert_int_equal(response.response_type, AZ_IOT_HUB_CLIENT_PROPERTIES_RESPONSE_TYPE_GET);
 }
 
 static void test_az_iot_hub_client_properties_parse_received_topic_reported_props_found_succeed()
@@ -530,17 +530,17 @@ static void test_az_iot_hub_client_properties_parse_received_topic_reported_prop
   az_iot_hub_client client;
   assert_int_equal(
       az_iot_hub_client_init(&client, test_device_hostname, test_device_id, &options), AZ_OK);
-  az_iot_hub_client_property_response response;
+  az_iot_hub_client_properties_response response;
 
   assert_int_equal(
-      az_iot_hub_client_property_parse_received_topic(
+      az_iot_hub_client_properties_parse_received_topic(
           &client, test_property_reported_props_success_response, &response),
       AZ_OK);
   assert_true(az_span_is_content_equal(response.request_id, test_device_request_id));
   assert_true(az_span_is_content_equal(response.version, AZ_SPAN_FROM_STR("16")));
   assert_int_equal(response.status, AZ_IOT_STATUS_NO_CONTENT);
   assert_int_equal(
-      response.response_type, AZ_IOT_HUB_CLIENT_PROPERTY_RESPONSE_TYPE_REPORTED_PROPERTIES);
+      response.response_type, AZ_IOT_HUB_CLIENT_PROPERTIES_RESPONSE_TYPE_REPORTED_PROPERTIES);
 }
 
 static void test_az_iot_hub_client_properties_parse_received_topic_not_found_fails()
@@ -551,10 +551,10 @@ static void test_az_iot_hub_client_properties_parse_received_topic_not_found_fai
   az_iot_hub_client client;
   assert_int_equal(
       az_iot_hub_client_init(&client, test_device_hostname, test_device_id, &options), AZ_OK);
-  az_iot_hub_client_property_response response;
+  az_iot_hub_client_properties_response response;
 
   assert_int_equal(
-      az_iot_hub_client_property_parse_received_topic(
+      az_iot_hub_client_properties_parse_received_topic(
           &client, test_property_received_topic_fail, &response),
       AZ_ERROR_IOT_TOPIC_NO_MATCH);
 }
@@ -567,10 +567,10 @@ static void test_az_iot_hub_client_properties_parse_received_topic_not_found_pre
   az_iot_hub_client client;
   assert_int_equal(
       az_iot_hub_client_init(&client, test_device_hostname, test_device_id, &options), AZ_OK);
-  az_iot_hub_client_property_response response;
+  az_iot_hub_client_properties_response response;
 
   assert_int_equal(
-      az_iot_hub_client_property_parse_received_topic(
+      az_iot_hub_client_properties_parse_received_topic(
           &client, test_property_received_topic_prefix_fail, &response),
       AZ_ERROR_IOT_TOPIC_NO_MATCH);
 }
@@ -589,7 +589,7 @@ static void test_az_iot_hub_client_properties_builder_begin_component_succeed()
   assert_int_equal(az_json_writer_append_begin_object(&jw), AZ_OK);
 
   assert_int_equal(
-      az_iot_hub_client_property_builder_begin_component(&client, &jw, test_component_one), AZ_OK);
+      az_iot_hub_client_properties_builder_begin_component(&client, &jw, test_component_one), AZ_OK);
   assert_string_equal(json_buffer, "{\"component_one\":{\"__t\":\"c\"");
 }
 
@@ -607,8 +607,8 @@ static void test_az_iot_hub_client_properties_builder_end_component_succeed()
   assert_int_equal(az_json_writer_append_begin_object(&jw), AZ_OK);
 
   assert_int_equal(
-      az_iot_hub_client_property_builder_begin_component(&client, &jw, test_component_one), AZ_OK);
-  assert_int_equal(az_iot_hub_client_property_builder_end_component(&client, &jw), AZ_OK);
+      az_iot_hub_client_properties_builder_begin_component(&client, &jw, test_component_one), AZ_OK);
+  assert_int_equal(az_iot_hub_client_properties_builder_end_component(&client, &jw), AZ_OK);
   assert_string_equal(json_buffer, "{\"component_one\":{\"__t\":\"c\"}");
 }
 
@@ -626,10 +626,10 @@ static void test_az_iot_hub_client_properties_builder_end_component_with_user_da
   assert_int_equal(az_json_writer_append_begin_object(&jw), AZ_OK);
 
   assert_int_equal(
-      az_iot_hub_client_property_builder_begin_component(&client, &jw, test_component_one), AZ_OK);
+      az_iot_hub_client_properties_builder_begin_component(&client, &jw, test_component_one), AZ_OK);
   assert_int_equal(az_json_writer_append_property_name(&jw, AZ_SPAN_FROM_STR("prop")), AZ_OK);
   assert_int_equal(az_json_writer_append_int32(&jw, 100), AZ_OK);
-  assert_int_equal(az_iot_hub_client_property_builder_end_component(&client, &jw), AZ_OK);
+  assert_int_equal(az_iot_hub_client_properties_builder_end_component(&client, &jw), AZ_OK);
   assert_string_equal(json_buffer, "{\"component_one\":{\"__t\":\"c\",\"prop\":100}");
 }
 
@@ -647,7 +647,7 @@ static void test_az_iot_hub_client_properties_builder_begin_response_status_succ
   assert_int_equal(az_json_writer_append_begin_object(&jw), AZ_OK);
 
   assert_int_equal(
-      az_iot_hub_client_property_builder_begin_response_status(
+      az_iot_hub_client_properties_builder_begin_response_status(
           &client,
           &jw,
           AZ_SPAN_FROM_STR("targetTemperature"),
@@ -674,7 +674,7 @@ static void test_az_iot_hub_client_properties_builder_end_response_status_succee
   assert_int_equal(az_json_writer_append_begin_object(&jw), AZ_OK);
 
   assert_int_equal(
-      az_iot_hub_client_property_builder_begin_response_status(
+      az_iot_hub_client_properties_builder_begin_response_status(
           &client,
           &jw,
           AZ_SPAN_FROM_STR("targetTemperature"),
@@ -683,7 +683,7 @@ static void test_az_iot_hub_client_properties_builder_end_response_status_succee
           AZ_SPAN_FROM_STR("success")),
       AZ_OK);
   assert_int_equal(az_json_writer_append_int32(&jw, 50), AZ_OK);
-  assert_int_equal(az_iot_hub_client_property_builder_end_response_status(&client, &jw), AZ_OK);
+  assert_int_equal(az_iot_hub_client_properties_builder_end_response_status(&client, &jw), AZ_OK);
 
   assert_int_equal(az_json_writer_append_end_object(&jw), AZ_OK);
 
@@ -706,16 +706,16 @@ static void test_az_iot_hub_client_properties_builder_begin_response_status_with
 
   assert_int_equal(az_json_writer_append_begin_object(&jw), AZ_OK);
   assert_int_equal(
-      az_iot_hub_client_property_builder_begin_component(
+      az_iot_hub_client_properties_builder_begin_component(
           &client, &jw, AZ_SPAN_FROM_STR("component_one")),
       AZ_OK);
   assert_int_equal(
-      az_iot_hub_client_property_builder_begin_response_status(
+      az_iot_hub_client_properties_builder_begin_response_status(
           &client, &jw, AZ_SPAN_FROM_STR("targetTemperature"), 200, 5, AZ_SPAN_FROM_STR("success")),
       AZ_OK);
   assert_int_equal(az_json_writer_append_int32(&jw, 23), AZ_OK);
-  assert_int_equal(az_iot_hub_client_property_builder_end_response_status(&client, &jw), AZ_OK);
-  assert_int_equal(az_iot_hub_client_property_builder_end_component(&client, &jw), AZ_OK);
+  assert_int_equal(az_iot_hub_client_properties_builder_end_response_status(&client, &jw), AZ_OK);
+  assert_int_equal(az_iot_hub_client_properties_builder_end_component(&client, &jw), AZ_OK);
 
   assert_int_equal(az_json_writer_append_end_object(&jw), AZ_OK);
 
@@ -740,25 +740,25 @@ test_az_iot_hub_client_properties_builder_begin_response_status_with_component_m
 
   assert_int_equal(az_json_writer_append_begin_object(&jw), AZ_OK);
   assert_int_equal(
-      az_iot_hub_client_property_builder_begin_component(
+      az_iot_hub_client_properties_builder_begin_component(
           &client, &jw, AZ_SPAN_FROM_STR("component_one")),
       AZ_OK);
 
   assert_int_equal(
-      az_iot_hub_client_property_builder_begin_response_status(
+      az_iot_hub_client_properties_builder_begin_response_status(
           &client, &jw, AZ_SPAN_FROM_STR("targetTemperature"), 200, 5, AZ_SPAN_FROM_STR("success")),
       AZ_OK);
   assert_int_equal(az_json_writer_append_int32(&jw, 23), AZ_OK);
-  assert_int_equal(az_iot_hub_client_property_builder_end_response_status(&client, &jw), AZ_OK);
+  assert_int_equal(az_iot_hub_client_properties_builder_end_response_status(&client, &jw), AZ_OK);
 
   assert_int_equal(
-      az_iot_hub_client_property_builder_begin_response_status(
+      az_iot_hub_client_properties_builder_begin_response_status(
           &client, &jw, AZ_SPAN_FROM_STR("targetHumidity"), 200, 8, AZ_SPAN_FROM_STR("success")),
       AZ_OK);
   assert_int_equal(az_json_writer_append_int32(&jw, 95), AZ_OK);
-  assert_int_equal(az_iot_hub_client_property_builder_end_response_status(&client, &jw), AZ_OK);
+  assert_int_equal(az_iot_hub_client_properties_builder_end_response_status(&client, &jw), AZ_OK);
 
-  assert_int_equal(az_iot_hub_client_property_builder_end_component(&client, &jw), AZ_OK);
+  assert_int_equal(az_iot_hub_client_properties_builder_end_component(&client, &jw), AZ_OK);
   assert_int_equal(az_json_writer_append_end_object(&jw), AZ_OK);
 
   assert_string_equal(
@@ -813,9 +813,9 @@ static void test_az_iot_hub_client_properties_logging_succeed()
   assert_true(
       az_iot_hub_client_init(&client, test_device_hostname, test_device_id, &options) == AZ_OK);
 
-  az_iot_hub_client_property_response response;
+  az_iot_hub_client_properties_response response;
   assert_int_equal(
-      az_iot_hub_client_property_parse_received_topic(
+      az_iot_hub_client_properties_parse_received_topic(
           &client, test_property_received_topic_desired_success, &response),
       AZ_OK);
 
@@ -825,7 +825,7 @@ static void test_az_iot_hub_client_properties_logging_succeed()
   az_log_set_classification_filter_callback(NULL);
 }
 
-static void test_az_iot_hub_client_properties_get_property_version_succeed()
+static void test_az_iot_hub_client_properties_get_properties_version_succeed()
 {
   az_iot_hub_client client;
   az_iot_hub_client_options options = az_iot_hub_client_options_default();
@@ -834,19 +834,19 @@ static void test_az_iot_hub_client_properties_get_property_version_succeed()
   assert_int_equal(
       az_iot_hub_client_init(&client, test_device_hostname, test_device_id, &options), AZ_OK);
 
-  az_iot_hub_client_property_response_type response_type
-      = AZ_IOT_HUB_CLIENT_PROPERTY_RESPONSE_TYPE_DESIRED_PROPERTIES;
+  az_iot_hub_client_properties_response_type response_type
+      = AZ_IOT_HUB_CLIENT_PROPERTIES_RESPONSE_TYPE_DESIRED_PROPERTIES;
   az_json_reader jr;
   int32_t version;
   assert_int_equal(az_json_reader_init(&jr, test_property_payload, NULL), AZ_OK);
 
   assert_int_equal(
-      az_iot_hub_client_property_get_property_version(&client, &jr, response_type, &version),
+      az_iot_hub_client_properties_get_properties_version(&client, &jr, response_type, &version),
       AZ_OK);
   assert_int_equal(version, 5);
 }
 
-static void test_az_iot_hub_client_properties_get_property_version_long_succeed()
+static void test_az_iot_hub_client_properties_get_properties_version_long_succeed()
 {
   az_iot_hub_client client;
   az_iot_hub_client_options options = az_iot_hub_client_options_default();
@@ -855,19 +855,19 @@ static void test_az_iot_hub_client_properties_get_property_version_long_succeed(
   assert_int_equal(
       az_iot_hub_client_init(&client, test_device_hostname, test_device_id, &options), AZ_OK);
 
-  az_iot_hub_client_property_response_type response_type
-      = AZ_IOT_HUB_CLIENT_PROPERTY_RESPONSE_TYPE_GET;
+  az_iot_hub_client_properties_response_type response_type
+      = AZ_IOT_HUB_CLIENT_PROPERTIES_RESPONSE_TYPE_GET;
   az_json_reader jr;
   int32_t version;
   assert_int_equal(az_json_reader_init(&jr, test_property_payload_long, NULL), AZ_OK);
 
   assert_int_equal(
-      az_iot_hub_client_property_get_property_version(&client, &jr, response_type, &version),
+      az_iot_hub_client_properties_get_properties_version(&client, &jr, response_type, &version),
       AZ_OK);
   assert_int_equal(version, 30);
 }
 
-static void test_az_iot_hub_client_properties_get_property_version_out_of_order_succeed()
+static void test_az_iot_hub_client_properties_get_properties_version_out_of_order_succeed()
 {
   az_iot_hub_client client;
   az_iot_hub_client_options options = az_iot_hub_client_options_default();
@@ -876,14 +876,14 @@ static void test_az_iot_hub_client_properties_get_property_version_out_of_order_
   assert_int_equal(
       az_iot_hub_client_init(&client, test_device_hostname, test_device_id, &options), AZ_OK);
 
-  az_iot_hub_client_property_response_type response_type
-      = AZ_IOT_HUB_CLIENT_PROPERTY_RESPONSE_TYPE_GET;
+  az_iot_hub_client_properties_response_type response_type
+      = AZ_IOT_HUB_CLIENT_PROPERTIES_RESPONSE_TYPE_GET;
   az_json_reader jr;
   int32_t version;
   assert_int_equal(az_json_reader_init(&jr, test_property_payload_out_of_order, NULL), AZ_OK);
 
   assert_int_equal(
-      az_iot_hub_client_property_get_property_version(&client, &jr, response_type, &version),
+      az_iot_hub_client_properties_get_properties_version(&client, &jr, response_type, &version),
       AZ_OK);
   assert_int_equal(version, 4);
 }
@@ -900,15 +900,15 @@ static void test_az_iot_hub_client_properties_get_next_component_property_succee
   az_json_reader jr;
   assert_int_equal(az_json_reader_init(&jr, test_property_payload, NULL), AZ_OK);
 
-  az_iot_hub_client_property_response_type response_type
-      = AZ_IOT_HUB_CLIENT_PROPERTY_RESPONSE_TYPE_DESIRED_PROPERTIES;
+  az_iot_hub_client_properties_response_type response_type
+      = AZ_IOT_HUB_CLIENT_PROPERTIES_RESPONSE_TYPE_DESIRED_PROPERTIES;
   az_span component_name;
   az_iot_hub_client_property_type property_type;
   int32_t value;
 
   // First component
   assert_int_equal(
-      az_iot_hub_client_property_get_next_component_property(
+      az_iot_hub_client_properties_get_next_component_property(
           &client, &jr, response_type, &component_name, &property_type),
       AZ_OK);
   assert_true(az_span_is_content_equal(component_name, test_component_one));
@@ -921,7 +921,7 @@ static void test_az_iot_hub_client_properties_get_next_component_property_succee
   assert_int_equal(az_json_reader_next_token(&jr), AZ_OK);
 
   assert_int_equal(
-      az_iot_hub_client_property_get_next_component_property(
+      az_iot_hub_client_properties_get_next_component_property(
           &client, &jr, response_type, &component_name, &property_type),
       AZ_OK);
   assert_true(az_span_is_content_equal(component_name, test_component_one));
@@ -934,7 +934,7 @@ static void test_az_iot_hub_client_properties_get_next_component_property_succee
 
   // Second component
   assert_int_equal(
-      az_iot_hub_client_property_get_next_component_property(
+      az_iot_hub_client_properties_get_next_component_property(
           &client, &jr, response_type, &component_name, &property_type),
       AZ_OK);
   assert_true(az_span_is_content_equal(component_name, test_component_two));
@@ -947,7 +947,7 @@ static void test_az_iot_hub_client_properties_get_next_component_property_succee
   assert_int_equal(az_json_reader_next_token(&jr), AZ_OK);
 
   assert_int_equal(
-      az_iot_hub_client_property_get_next_component_property(
+      az_iot_hub_client_properties_get_next_component_property(
           &client, &jr, response_type, &component_name, &property_type),
       AZ_OK);
   assert_true(az_json_token_is_text_equal(&jr.token, AZ_SPAN_FROM_STR("prop_four")));
@@ -959,7 +959,7 @@ static void test_az_iot_hub_client_properties_get_next_component_property_succee
 
   // Not a component
   assert_int_equal(
-      az_iot_hub_client_property_get_next_component_property(
+      az_iot_hub_client_properties_get_next_component_property(
           &client, &jr, response_type, &component_name, &property_type),
       AZ_OK);
   assert_true(az_span_is_content_equal(component_name, AZ_SPAN_EMPTY));
@@ -973,7 +973,7 @@ static void test_az_iot_hub_client_properties_get_next_component_property_succee
 
   // End of components (skipping version)
   assert_int_equal(
-      az_iot_hub_client_property_get_next_component_property(
+      az_iot_hub_client_properties_get_next_component_property(
           &client, &jr, response_type, &component_name, &property_type),
       AZ_ERROR_IOT_END_OF_PROPERTIES);
 }
@@ -990,15 +990,15 @@ static void test_az_iot_hub_client_properties_get_next_component_property_user_n
   az_json_reader jr;
   assert_int_equal(az_json_reader_init(&jr, test_property_payload, NULL), AZ_OK);
 
-  az_iot_hub_client_property_response_type response_type
-      = AZ_IOT_HUB_CLIENT_PROPERTY_RESPONSE_TYPE_DESIRED_PROPERTIES;
+  az_iot_hub_client_properties_response_type response_type
+      = AZ_IOT_HUB_CLIENT_PROPERTIES_RESPONSE_TYPE_DESIRED_PROPERTIES;
   az_span component_name;
   az_iot_hub_client_property_type property_type;
   int32_t value;
 
   // First component
   assert_int_equal(
-      az_iot_hub_client_property_get_next_component_property(
+      az_iot_hub_client_properties_get_next_component_property(
           &client, &jr, response_type, &component_name, &property_type),
       AZ_OK);
   assert_true(az_span_is_content_equal(component_name, test_component_one));
@@ -1008,7 +1008,7 @@ static void test_az_iot_hub_client_properties_get_next_component_property_user_n
   assert_int_equal(value, 1);
 
   assert_int_equal(
-      az_iot_hub_client_property_get_next_component_property(
+      az_iot_hub_client_properties_get_next_component_property(
           &client, &jr, response_type, &component_name, &property_type),
       AZ_ERROR_JSON_INVALID_STATE);
 }
@@ -1026,15 +1026,15 @@ test_az_iot_hub_client_properties_get_next_component_property_user_not_advance_i
   az_json_reader jr;
   assert_int_equal(az_json_reader_init(&jr, test_property_payload_with_user_object, NULL), AZ_OK);
 
-  az_iot_hub_client_property_response_type response_type
-      = AZ_IOT_HUB_CLIENT_PROPERTY_RESPONSE_TYPE_DESIRED_PROPERTIES;
+  az_iot_hub_client_properties_response_type response_type
+      = AZ_IOT_HUB_CLIENT_PROPERTIES_RESPONSE_TYPE_DESIRED_PROPERTIES;
   az_span component_name;
   az_iot_hub_client_property_type property_type;
   int32_t value;
 
   // First component
   assert_int_equal(
-      az_iot_hub_client_property_get_next_component_property(
+      az_iot_hub_client_properties_get_next_component_property(
           &client, &jr, response_type, &component_name, &property_type),
       AZ_OK);
   assert_true(az_span_is_content_equal(component_name, test_component_one));
@@ -1047,7 +1047,7 @@ test_az_iot_hub_client_properties_get_next_component_property_user_not_advance_i
   assert_int_equal(az_json_reader_next_token(&jr), AZ_OK);
 
   assert_int_equal(
-      az_iot_hub_client_property_get_next_component_property(
+      az_iot_hub_client_properties_get_next_component_property(
           &client, &jr, response_type, &component_name, &property_type),
       AZ_OK);
   assert_true(az_span_is_content_equal(component_name, test_component_one));
@@ -1062,7 +1062,7 @@ test_az_iot_hub_client_properties_get_next_component_property_user_not_advance_i
   assert_true(jr.token.kind == AZ_JSON_TOKEN_PROPERTY_NAME);
 
   assert_int_equal(
-      az_iot_hub_client_property_get_next_component_property(
+      az_iot_hub_client_properties_get_next_component_property(
           &client, &jr, response_type, &component_name, &property_type),
       AZ_ERROR_JSON_INVALID_STATE);
 }
@@ -1080,15 +1080,15 @@ test_az_iot_hub_client_properties_get_next_component_property_user_not_advance_i
   az_json_reader jr;
   assert_int_equal(az_json_reader_init(&jr, test_property_payload_with_user_object, NULL), AZ_OK);
 
-  az_iot_hub_client_property_response_type response_type
-      = AZ_IOT_HUB_CLIENT_PROPERTY_RESPONSE_TYPE_DESIRED_PROPERTIES;
+  az_iot_hub_client_properties_response_type response_type
+      = AZ_IOT_HUB_CLIENT_PROPERTIES_RESPONSE_TYPE_DESIRED_PROPERTIES;
   az_span component_name;
   az_iot_hub_client_property_type property_type;
   int32_t value;
 
   // First component
   assert_int_equal(
-      az_iot_hub_client_property_get_next_component_property(
+      az_iot_hub_client_properties_get_next_component_property(
           &client, &jr, response_type, &component_name, &property_type),
       AZ_OK);
   assert_true(az_span_is_content_equal(component_name, test_component_one));
@@ -1101,7 +1101,7 @@ test_az_iot_hub_client_properties_get_next_component_property_user_not_advance_i
   assert_int_equal(az_json_reader_next_token(&jr), AZ_OK);
 
   assert_int_equal(
-      az_iot_hub_client_property_get_next_component_property(
+      az_iot_hub_client_properties_get_next_component_property(
           &client, &jr, response_type, &component_name, &property_type),
       AZ_OK);
   assert_true(az_span_is_content_equal(component_name, test_component_one));
@@ -1112,13 +1112,13 @@ test_az_iot_hub_client_properties_get_next_component_property_user_not_advance_i
   assert_int_equal(az_json_reader_skip_children(&jr), AZ_OK);
 
   assert_int_equal(
-      az_iot_hub_client_property_get_next_component_property(
+      az_iot_hub_client_properties_get_next_component_property(
           &client, &jr, response_type, &component_name, &property_type),
       AZ_OK);
 
   // First component
   assert_int_equal(
-      az_iot_hub_client_property_get_next_component_property(
+      az_iot_hub_client_properties_get_next_component_property(
           &client, &jr, response_type, &component_name, &property_type),
       AZ_OK);
   assert_true(az_span_is_content_equal(component_name, test_component_two));
@@ -1131,7 +1131,7 @@ test_az_iot_hub_client_properties_get_next_component_property_user_not_advance_i
   assert_int_equal(az_json_reader_next_token(&jr), AZ_OK);
 
   assert_int_equal(
-      az_iot_hub_client_property_get_next_component_property(
+      az_iot_hub_client_properties_get_next_component_property(
           &client, &jr, response_type, &component_name, &property_type),
       AZ_OK);
   assert_true(az_span_is_content_equal(component_name, test_component_two));
@@ -1144,7 +1144,7 @@ test_az_iot_hub_client_properties_get_next_component_property_user_not_advance_i
 
   // Non component property
   assert_int_equal(
-      az_iot_hub_client_property_get_next_component_property(
+      az_iot_hub_client_properties_get_next_component_property(
           &client, &jr, response_type, &component_name, &property_type),
       AZ_OK);
   assert_true(az_span_is_content_equal(component_name, AZ_SPAN_EMPTY));
@@ -1157,7 +1157,7 @@ test_az_iot_hub_client_properties_get_next_component_property_user_not_advance_i
   assert_int_equal(az_json_reader_next_token(&jr), AZ_OK);
 
   assert_int_equal(
-      az_iot_hub_client_property_get_next_component_property(
+      az_iot_hub_client_properties_get_next_component_property(
           &client, &jr, response_type, &component_name, &property_type),
       AZ_ERROR_JSON_INVALID_STATE);
 }
@@ -1174,15 +1174,15 @@ static void test_az_iot_hub_client_properties_get_next_component_property_user_n
   az_json_reader jr;
   assert_int_equal(az_json_reader_init(&jr, test_property_payload, NULL), AZ_OK);
 
-  az_iot_hub_client_property_response_type response_type
-      = AZ_IOT_HUB_CLIENT_PROPERTY_RESPONSE_TYPE_DESIRED_PROPERTIES;
+  az_iot_hub_client_properties_response_type response_type
+      = AZ_IOT_HUB_CLIENT_PROPERTIES_RESPONSE_TYPE_DESIRED_PROPERTIES;
   az_span component_name;
   az_iot_hub_client_property_type property_type;
   int32_t value;
 
   // First component
   assert_int_equal(
-      az_iot_hub_client_property_get_next_component_property(
+      az_iot_hub_client_properties_get_next_component_property(
           &client, &jr, response_type, &component_name, &property_type),
       AZ_OK);
   assert_true(az_span_is_content_equal(component_name, test_component_one));
@@ -1195,7 +1195,7 @@ static void test_az_iot_hub_client_properties_get_next_component_property_user_n
   assert_int_equal(az_json_reader_next_token(&jr), AZ_OK);
 
   assert_int_equal(
-      az_iot_hub_client_property_get_next_component_property(
+      az_iot_hub_client_properties_get_next_component_property(
           &client, &jr, response_type, &component_name, &property_type),
       AZ_OK);
   assert_true(az_span_is_content_equal(component_name, test_component_one));
@@ -1208,7 +1208,7 @@ static void test_az_iot_hub_client_properties_get_next_component_property_user_n
 
   // Second component
   assert_int_equal(
-      az_iot_hub_client_property_get_next_component_property(
+      az_iot_hub_client_properties_get_next_component_property(
           &client, &jr, response_type, &component_name, &property_type),
       AZ_OK);
   assert_true(az_span_is_content_equal(component_name, test_component_two));
@@ -1221,7 +1221,7 @@ static void test_az_iot_hub_client_properties_get_next_component_property_user_n
   assert_int_equal(az_json_reader_next_token(&jr), AZ_OK);
 
   assert_int_equal(
-      az_iot_hub_client_property_get_next_component_property(
+      az_iot_hub_client_properties_get_next_component_property(
           &client, &jr, response_type, &component_name, &property_type),
       AZ_OK);
   assert_true(az_json_token_is_text_equal(&jr.token, AZ_SPAN_FROM_STR("prop_four")));
@@ -1233,7 +1233,7 @@ static void test_az_iot_hub_client_properties_get_next_component_property_user_n
 
   // Not a component
   assert_int_equal(
-      az_iot_hub_client_property_get_next_component_property(
+      az_iot_hub_client_properties_get_next_component_property(
           &client, &jr, response_type, &component_name, &property_type),
       AZ_OK);
   assert_true(az_span_is_content_equal(component_name, AZ_SPAN_EMPTY));
@@ -1244,7 +1244,7 @@ static void test_az_iot_hub_client_properties_get_next_component_property_user_n
 
   // End of components (skipping version)
   assert_int_equal(
-      az_iot_hub_client_property_get_next_component_property(
+      az_iot_hub_client_properties_get_next_component_property(
           &client, &jr, response_type, &component_name, &property_type),
       AZ_ERROR_JSON_INVALID_STATE);
 }
@@ -1261,14 +1261,14 @@ static void test_az_iot_hub_client_properties_get_next_component_property_two_su
   az_json_reader jr;
   assert_int_equal(az_json_reader_init(&jr, test_property_payload_two, NULL), AZ_OK);
 
-  az_iot_hub_client_property_response_type response_type
-      = AZ_IOT_HUB_CLIENT_PROPERTY_RESPONSE_TYPE_GET;
+  az_iot_hub_client_properties_response_type response_type
+      = AZ_IOT_HUB_CLIENT_PROPERTIES_RESPONSE_TYPE_GET;
   az_span component_name;
   az_iot_hub_client_property_type property_type;
   int32_t value;
   // First component
   assert_int_equal(
-      az_iot_hub_client_property_get_next_component_property(
+      az_iot_hub_client_properties_get_next_component_property(
           &client, &jr, response_type, &component_name, &property_type),
       AZ_OK);
   assert_true(az_span_is_content_equal(component_name, test_temp_component_one));
@@ -1282,7 +1282,7 @@ static void test_az_iot_hub_client_properties_get_next_component_property_two_su
 
   // End of components (skipping version and reported properties section)
   assert_int_equal(
-      az_iot_hub_client_property_get_next_component_property(
+      az_iot_hub_client_properties_get_next_component_property(
           &client, &jr, response_type, &component_name, &property_type),
       AZ_ERROR_IOT_END_OF_PROPERTIES);
 }
@@ -1299,14 +1299,14 @@ static void test_az_iot_hub_client_properties_get_next_component_property_out_of
   az_json_reader jr;
   assert_int_equal(az_json_reader_init(&jr, test_property_payload_out_of_order, NULL), AZ_OK);
 
-  az_iot_hub_client_property_response_type response_type
-      = AZ_IOT_HUB_CLIENT_PROPERTY_RESPONSE_TYPE_GET;
+  az_iot_hub_client_properties_response_type response_type
+      = AZ_IOT_HUB_CLIENT_PROPERTIES_RESPONSE_TYPE_GET;
   az_span component_name;
   az_iot_hub_client_property_type property_type;
   int32_t value;
   // First component
   assert_int_equal(
-      az_iot_hub_client_property_get_next_component_property(
+      az_iot_hub_client_properties_get_next_component_property(
           &client, &jr, response_type, &component_name, &property_type),
       AZ_OK);
   assert_true(az_span_is_content_equal(component_name, test_temp_component_one));
@@ -1320,7 +1320,7 @@ static void test_az_iot_hub_client_properties_get_next_component_property_out_of
 
   // End of components (skipping version and reported properties section)
   assert_int_equal(
-      az_iot_hub_client_property_get_next_component_property(
+      az_iot_hub_client_properties_get_next_component_property(
           &client, &jr, response_type, &component_name, &property_type),
       AZ_ERROR_IOT_END_OF_PROPERTIES);
 }
@@ -1337,14 +1337,14 @@ static void test_az_iot_hub_client_properties_get_next_component_property_long_s
   az_json_reader jr;
   assert_int_equal(az_json_reader_init(&jr, test_property_payload_long, NULL), AZ_OK);
 
-  az_iot_hub_client_property_response_type response_type
-      = AZ_IOT_HUB_CLIENT_PROPERTY_RESPONSE_TYPE_GET;
+  az_iot_hub_client_properties_response_type response_type
+      = AZ_IOT_HUB_CLIENT_PROPERTIES_RESPONSE_TYPE_GET;
   az_span component_name;
   az_iot_hub_client_property_type property_type;
   int32_t value;
   // First component
   assert_int_equal(
-      az_iot_hub_client_property_get_next_component_property(
+      az_iot_hub_client_properties_get_next_component_property(
           &client, &jr, response_type, &component_name, &property_type),
       AZ_OK);
   assert_true(az_span_is_content_equal(component_name, test_temp_component_two));
@@ -1358,7 +1358,7 @@ static void test_az_iot_hub_client_properties_get_next_component_property_long_s
 
   // Second component
   assert_int_equal(
-      az_iot_hub_client_property_get_next_component_property(
+      az_iot_hub_client_properties_get_next_component_property(
           &client, &jr, response_type, &component_name, &property_type),
       AZ_OK);
   assert_true(az_span_is_content_equal(component_name, test_temp_component_one));
@@ -1372,7 +1372,7 @@ static void test_az_iot_hub_client_properties_get_next_component_property_long_s
 
   // Not a component
   assert_int_equal(
-      az_iot_hub_client_property_get_next_component_property(
+      az_iot_hub_client_properties_get_next_component_property(
           &client, &jr, response_type, &component_name, &property_type),
       AZ_OK);
   assert_true(az_span_is_content_equal(component_name, AZ_SPAN_EMPTY));
@@ -1386,7 +1386,7 @@ static void test_az_iot_hub_client_properties_get_next_component_property_long_s
 
   // End of components (skipping version and reported properties section)
   assert_int_equal(
-      az_iot_hub_client_property_get_next_component_property(
+      az_iot_hub_client_properties_get_next_component_property(
           &client, &jr, response_type, &component_name, &property_type),
       AZ_ERROR_IOT_END_OF_PROPERTIES);
 }
@@ -1403,11 +1403,11 @@ static void test_az_iot_hub_client_properties_get_next_component_property_long_w
   az_json_reader jr;
   assert_int_equal(az_json_reader_init(&jr, test_property_payload_long, NULL), AZ_OK);
 
-  az_iot_hub_client_property_response_type response_type
-      = AZ_IOT_HUB_CLIENT_PROPERTY_RESPONSE_TYPE_GET;
+  az_iot_hub_client_properties_response_type response_type
+      = AZ_IOT_HUB_CLIENT_PROPERTIES_RESPONSE_TYPE_GET;
   int32_t version;
   assert_int_equal(
-      az_iot_hub_client_property_get_property_version(&client, &jr, response_type, &version),
+      az_iot_hub_client_properties_get_properties_version(&client, &jr, response_type, &version),
       AZ_OK);
   assert_int_equal(version, 30);
 
@@ -1418,7 +1418,7 @@ static void test_az_iot_hub_client_properties_get_next_component_property_long_w
   int32_t value;
   // First component
   assert_int_equal(
-      az_iot_hub_client_property_get_next_component_property(
+      az_iot_hub_client_properties_get_next_component_property(
           &client, &jr, response_type, &component_name, &property_type),
       AZ_OK);
   assert_true(az_span_is_content_equal(component_name, test_temp_component_two));
@@ -1432,7 +1432,7 @@ static void test_az_iot_hub_client_properties_get_next_component_property_long_w
 
   // Second component
   assert_int_equal(
-      az_iot_hub_client_property_get_next_component_property(
+      az_iot_hub_client_properties_get_next_component_property(
           &client, &jr, response_type, &component_name, &property_type),
       AZ_OK);
   assert_true(az_span_is_content_equal(component_name, test_temp_component_one));
@@ -1446,7 +1446,7 @@ static void test_az_iot_hub_client_properties_get_next_component_property_long_w
 
   // Not a component
   assert_int_equal(
-      az_iot_hub_client_property_get_next_component_property(
+      az_iot_hub_client_properties_get_next_component_property(
           &client, &jr, response_type, &component_name, &property_type),
       AZ_OK);
   assert_true(az_span_is_content_equal(component_name, AZ_SPAN_EMPTY));
@@ -1460,7 +1460,7 @@ static void test_az_iot_hub_client_properties_get_next_component_property_long_w
 
   // End of components (skipping version and reported properties section)
   assert_int_equal(
-      az_iot_hub_client_property_get_next_component_property(
+      az_iot_hub_client_properties_get_next_component_property(
           &client, &jr, response_type, &component_name, &property_type),
       AZ_ERROR_IOT_END_OF_PROPERTIES);
 }
@@ -1514,9 +1514,9 @@ int test_az_iot_hub_client_properties()
     cmocka_unit_test(test_az_iot_hub_client_properties_builder_begin_component_succeed),
     cmocka_unit_test(test_az_iot_hub_client_properties_builder_end_component_succeed),
     cmocka_unit_test(test_az_iot_hub_client_properties_builder_end_component_with_user_data_succeed),
-    cmocka_unit_test(test_az_iot_hub_client_properties_get_property_version_succeed),
-    cmocka_unit_test(test_az_iot_hub_client_properties_get_property_version_long_succeed),
-    cmocka_unit_test(test_az_iot_hub_client_properties_get_property_version_out_of_order_succeed),
+    cmocka_unit_test(test_az_iot_hub_client_properties_get_properties_version_succeed),
+    cmocka_unit_test(test_az_iot_hub_client_properties_get_properties_version_long_succeed),
+    cmocka_unit_test(test_az_iot_hub_client_properties_get_properties_version_out_of_order_succeed),
     cmocka_unit_test(test_az_iot_hub_client_properties_get_next_component_property_succeed),
     cmocka_unit_test(
         test_az_iot_hub_client_properties_get_next_component_property_user_not_advance_fail),

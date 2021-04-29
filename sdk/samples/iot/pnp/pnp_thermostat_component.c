@@ -211,7 +211,7 @@ void pnp_thermostat_build_maximum_temperature_reported_property(
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_init(&jw, payload, NULL), log);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_begin_object(&jw), log);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-      az_iot_hub_client_property_builder_begin_component(
+      az_iot_hub_client_properties_builder_begin_component(
           hub_client, &jw, thermostat_component->component_name),
       log);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(
@@ -222,7 +222,7 @@ void pnp_thermostat_build_maximum_temperature_reported_property(
           &jw, thermostat_component->current_temperature, DOUBLE_DECIMAL_PLACE_DIGITS),
       log);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-      az_iot_hub_client_property_builder_end_component(hub_client, &jw), log);
+      az_iot_hub_client_properties_builder_end_component(hub_client, &jw), log);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_end_object(&jw), log);
 
   *out_payload = az_json_writer_get_bytes_used_in_destination(&jw);
@@ -291,11 +291,11 @@ az_result pnp_thermostat_process_property_update(
 
     IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_begin_object(&jw), property_log);
     IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-        az_iot_hub_client_property_builder_begin_component(
+        az_iot_hub_client_properties_builder_begin_component(
             hub_client, &jw, ref_thermostat_component->component_name),
         property_log);
     IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-        az_iot_hub_client_property_builder_begin_response_status(
+        az_iot_hub_client_properties_builder_begin_response_status(
             hub_client,
             &jw,
             property_name_span,
@@ -307,9 +307,9 @@ az_result pnp_thermostat_process_property_update(
         az_json_writer_append_double(&jw, parsed_property_value, DOUBLE_DECIMAL_PLACE_DIGITS),
         property_log);
     IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-        az_iot_hub_client_property_builder_end_response_status(hub_client, &jw), property_log);
+        az_iot_hub_client_properties_builder_end_response_status(hub_client, &jw), property_log);
     IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-        az_iot_hub_client_property_builder_end_component(hub_client, &jw), property_log);
+        az_iot_hub_client_properties_builder_end_component(hub_client, &jw), property_log);
 
     IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_end_object(&jw), property_log);
 
