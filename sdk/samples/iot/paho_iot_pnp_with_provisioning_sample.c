@@ -173,10 +173,10 @@ static void build_property_payload_with_status(
     az_span* out_property_payload);
 
 /*
- * This sample connects an IoT Plug and Play enabled device with the Digital Twin Model ID (DTMI).
- * If a timeout occurs while waiting for a message from the Azure IoT Explorer, the sample will
- * continue. If MQTT_TIMEOUT_RECEIVE_MAX_MESSAGE_COUNT timeouts occur consecutively, the sample will
- * disconnect. X509 self-certification is used.
+ * This sample connects an Azure IoT Plug and Play enabled device with the Digital Twin Model ID
+ * (DTMI). If a timeout occurs while waiting for a message from the Azure IoT Explorer, the sample
+ * will continue. If MQTT_TIMEOUT_RECEIVE_MAX_MESSAGE_COUNT timeouts occur consecutively, the sample
+ * will disconnect. X509 self-certification is used.
  *
  * To interact with this sample, you must use the Azure IoT Explorer. The capabilities are Device
  * Properties, Command, and Telemetry:

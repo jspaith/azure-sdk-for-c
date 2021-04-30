@@ -130,8 +130,8 @@ static void temp_controller_invoke_reboot(void);
 static az_result append_simple_json_token(az_json_writer* jw, az_json_token* json_token);
 
 /*
- * This sample extends the IoT Plug and Play Sample above to mimic a Temperature Controller
- * and connects the IoT Plug and Play enabled device (the Temperature Controller) with the Digital
+ * This sample extends the Azure IoT Plug and Play Sample above to mimic a Temperature Controller
+ * and connects the Plug and Play enabled device (the Temperature Controller) with the Digital
  * Twin Model ID (DTMI). If a timeout occurs while waiting for a message from the Azure IoT
  * Explorer, the sample will continue. If PNP_MQTT_TIMEOUT_RECEIVE_MAX_COUNT timeouts occur
  * consecutively, the sample will disconnect. X509 self-certification is used.
@@ -386,7 +386,9 @@ static void subscribe_mqtt_client_to_iot_hub_topics(void)
 
   // Messages received on the property PATCH topic will be updates to the desired properties.
   rc = MQTTClient_subscribe(
-      mqtt_client, AZ_IOT_HUB_CLIENT_PROPERTIES_PATCH_SUBSCRIBE_TOPIC, IOT_SAMPLE_MQTT_SUBSCRIBE_QOS);
+      mqtt_client,
+      AZ_IOT_HUB_CLIENT_PROPERTIES_PATCH_SUBSCRIBE_TOPIC,
+      IOT_SAMPLE_MQTT_SUBSCRIBE_QOS);
   if (rc != MQTTCLIENT_SUCCESS)
   {
     IOT_SAMPLE_LOG_ERROR(
@@ -654,7 +656,8 @@ static void on_message_received(
   az_iot_hub_client_command_request command_request;
 
   // Parse the incoming message topic and handle appropriately.
-  rc = az_iot_hub_client_properties_parse_received_topic(&hub_client, topic_span, &property_response);
+  rc = az_iot_hub_client_properties_parse_received_topic(
+      &hub_client, topic_span, &property_response);
   if (az_result_succeeded(rc))
   {
     IOT_SAMPLE_LOG_SUCCESS("Client received a valid property topic response.");
@@ -702,7 +705,8 @@ static void process_property_message(
   rc = az_json_reader_init(&jr, property_message_span, NULL);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Could not initialize the json reader");
 
-  rc = az_iot_hub_client_properties_get_properties_version(&hub_client, &jr, response_type, &version);
+  rc = az_iot_hub_client_properties_get_properties_version(
+      &hub_client, &jr, response_type, &version);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Could not get the property version");
 
   rc = az_json_reader_init(&jr, property_message_span, NULL);
@@ -779,7 +783,8 @@ static void process_property_message(
         if (az_span_size(component_name) > 0)
         {
           IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-              az_iot_hub_client_properties_builder_begin_component(&hub_client, &jw, component_name),
+              az_iot_hub_client_properties_builder_begin_component(
+                  &hub_client, &jw, component_name),
               "Could not begin the property component");
         }
 
@@ -947,29 +952,21 @@ static void send_telemetry_messages(void)
   az_iot_message_properties properties;
 
   // alternately...
-  // az_iot_message_properties_options properties_options = az_iot_message_properties_options_init();
-  // properties_options.component_name = "foo";
-  // az_iot_message_properties_init_with_options(&properties, properties_span, written, &properties_options);
+  // az_iot_message_properties_options properties_options =
+  // az_iot_message_properties_options_init(); properties_options.component_name = "foo";
+  // az_iot_message_properties_init_with_options(&properties, properties_span, written,
+  // &properties_options);
 
-  az_result rc = az_iot_message_properties_init(
-      &properties,
-      properties_span,
-      0);
+  az_result rc = az_iot_message_properties_init(&properties, properties_span, 0);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Unable to allocate properties");
 
-  rc = az_iot_message_properties_append_component_name(
-      &properties,
-      thermostat_1.component_name);
+  rc = az_iot_message_properties_append_component_name(&properties, thermostat_1.component_name);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Unable to append properties");
 
   // Temperature Sensor 1
   // Get the telemetry topic to publish the telemetry message.
   rc = az_iot_hub_client_telemetry_get_publish_topic(
-      &hub_client,
-      &properties,
-      publish_message.topic,
-      publish_message.topic_length,
-      NULL);
+      &hub_client, &properties, publish_message.topic, publish_message.topic_length, NULL);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Unable to get the telemetry topic");
 
   // Build the telemetry message.
@@ -984,23 +981,14 @@ static void send_telemetry_messages(void)
 
   // Temperature Sensor 2
   // Get the telemetry topic to publish the telemetry message.
-  rc = az_iot_message_properties_init(
-        &properties,
-        properties_span,
-        0);
+  rc = az_iot_message_properties_init(&properties, properties_span, 0);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Unable to allocate properties");
 
-  rc = az_iot_message_properties_append_component_name(
-      &properties,
-      thermostat_2.component_name);
+  rc = az_iot_message_properties_append_component_name(&properties, thermostat_2.component_name);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Unable to append properties");
 
   rc = az_iot_hub_client_telemetry_get_publish_topic(
-      &hub_client,
-      NULL,
-      publish_message.topic,
-      publish_message.topic_length,
-      NULL);
+      &hub_client, NULL, publish_message.topic, publish_message.topic_length, NULL);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Unable to get the telemetry topic");
 
   // Build the telemetry message.

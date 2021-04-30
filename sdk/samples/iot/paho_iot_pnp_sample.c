@@ -158,10 +158,10 @@ static void build_property_payload_with_status(
     az_span* out_property_payload);
 
 /*
- * This sample connects an IoT Plug and Play enabled device with the Digital Twin Model ID (DTMI).
- * If a timeout occurs while waiting for a message from the Azure IoT Explorer, the sample will
- * continue. If MQTT_TIMEOUT_RECEIVE_MAX_MESSAGE_COUNT timeouts occur consecutively, the sample will
- * disconnect. X509 self-certification is used.
+ * This sample connects an Azure IoT Plug and Play enabled device with the Digital Twin Model ID
+ * (DTMI). If a timeout occurs while waiting for a message from the Azure IoT Explorer, the sample
+ * will continue. If MQTT_TIMEOUT_RECEIVE_MAX_MESSAGE_COUNT timeouts occur consecutively, the sample
+ * will disconnect. X509 self-certification is used.
  *
  * To interact with this sample, you must use the Azure IoT Explorer. The capabilities are Device
  * Properties, Command, and Telemetry:
@@ -481,7 +481,8 @@ static void on_message_received(char* topic, int topic_len, MQTTClient_message c
   az_iot_hub_client_command_request command_request;
 
   // Parse the incoming message topic and handle appropriately.
-  rc = az_iot_hub_client_properties_parse_received_topic(&hub_client, topic_span, &property_response);
+  rc = az_iot_hub_client_properties_parse_received_topic(
+      &hub_client, topic_span, &property_response);
   if (az_result_succeeded(rc))
   {
     IOT_SAMPLE_LOG_SUCCESS("Client received a valid topic response.");
@@ -824,11 +825,7 @@ static void send_telemetry_message(void)
   // Get the Telemetry topic to publish the telemetry message.
   char telemetry_topic_buffer[128];
   rc = az_iot_hub_client_telemetry_get_publish_topic(
-      &hub_client,
-      NULL,
-      telemetry_topic_buffer,
-      sizeof(telemetry_topic_buffer),
-      NULL);
+      &hub_client, NULL, telemetry_topic_buffer, sizeof(telemetry_topic_buffer), NULL);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Failed to get the Telemetry topic");
 
   // Build the telemetry message.
