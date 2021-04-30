@@ -698,7 +698,6 @@ static void process_property_message(
 
   az_json_reader jr;
   az_span component_name;
-  az_iot_hub_client_property_type property_type;
   int32_t version = 0;
   rc = az_json_reader_init(&jr, property_message_span, NULL);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Could not initialize the json reader");
@@ -711,7 +710,7 @@ static void process_property_message(
 
   while (az_result_succeeded(
       rc = az_iot_hub_client_properties_get_next_component_property(
-          &hub_client, &jr, response_type, &component_name, &property_type)))
+          &hub_client, &jr, response_type, AZ_IOT_HUB_CLIENT_PROPERTY_WRITEABLE, &component_name)))
   {
     if (rc == AZ_OK)
     {

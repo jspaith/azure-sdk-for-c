@@ -557,10 +557,9 @@ static void process_device_property_message(
 
   double desired_temperature;
   az_span component_name;
-  az_iot_hub_client_property_type property_type;
 
   while (az_result_succeeded(az_iot_hub_client_properties_get_next_component_property(
-      &hub_client, &jr, response_type, &component_name, &property_type)))
+      &hub_client, &jr, response_type, AZ_IOT_HUB_CLIENT_PROPERTY_WRITEABLE, &component_name)))
   {
     if (az_json_token_is_text_equal(&jr.token, property_desired_temperature_name))
     {
@@ -824,9 +823,8 @@ static void send_telemetry_message(void)
 
   // Get the Telemetry topic to publish the telemetry message.
   char telemetry_topic_buffer[128];
-  rc = az_iot_client_telemetry_with_component_get_publish_topic(
+  rc = az_iot_hub_client_telemetry_get_publish_topic(
       &hub_client,
-      AZ_SPAN_EMPTY,
       NULL,
       telemetry_topic_buffer,
       sizeof(telemetry_topic_buffer),

@@ -241,11 +241,10 @@ typedef enum
  * @code
  *
  * while (az_result_succeeded(az_iot_hub_client_properties_get_next_component_property(
- *       &hub_client, &jr, response_type, property_type, &component_name)))
+ *       &hub_client, &jr, response_type, AZ_IOT_HUB_CLIENT_PROPERTY_WRITEABLE, &component_name)))
  * {
  *   // Check if property is of interest (substitute user_property for your own property name)
- *   if ((property_type == AZ_IOT_HUB_CLIENT_PROPERTY_WRITEABLE) &&
-         (az_json_token_is_text_equal(&jr.token, user_property)))
+ *   if (az_json_token_is_text_equal(&jr.token, user_property))
  *   {
  *     az_json_reader_next_token(&jr);
  *
@@ -269,11 +268,17 @@ typedef enum
  *
  * @endcode
  *
+ * @warning If you need to retrieve more than one \p property_type, you should first complete the
+ * scan of all components for the first property type (until the API returns #AZ_ERROR_IOT_END_OF_PROPERTIES).
+ * Then you must call az_json_reader_init() again after this call and before the next call to
+ * az_iot_hub_client_properties_get_next_component_property with the different \p property_type.
+ *
  * @param[in] client The #az_iot_hub_client to use for this call.
  * @param[in,out] ref_json_reader The #az_json_reader to parse through. The ownership of iterating
  * through this json reader is shared between the user and this API.
  * @param[in] response_type The #az_iot_hub_client_properties_response_type representing the message
  * type associated with the payload.
+ * @param[in] property_type The #az_iot_hub_client_property_type to scan for.
  * @param[out] out_component_name The #az_span* representing the value of the component.
  *
  * @pre \p client must not be `NULL`.
@@ -290,8 +295,8 @@ AZ_NODISCARD az_result az_iot_hub_client_properties_get_next_component_property(
     az_iot_hub_client const* client,
     az_json_reader* ref_json_reader,
     az_iot_hub_client_properties_response_type response_type,
-    az_span* out_component_name,
-    az_iot_hub_client_property_type* property_type);
+    az_iot_hub_client_property_type property_type,
+    az_span* out_component_name);
 
 #include <azure/core/_az_cfg_suffix.h>
 

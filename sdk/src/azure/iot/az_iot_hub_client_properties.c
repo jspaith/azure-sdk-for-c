@@ -379,13 +379,12 @@ AZ_NODISCARD az_result az_iot_hub_client_properties_get_next_component_property(
     az_iot_hub_client const* client,
     az_json_reader* ref_json_reader,
     az_iot_hub_client_properties_response_type response_type,
-    az_span* out_component_name,
-    az_iot_hub_client_property_type* property_type)
+    az_iot_hub_client_property_type property_type,
+    az_span* out_component_name)
 {
   _az_PRECONDITION_NOT_NULL(client);
   _az_PRECONDITION_NOT_NULL(ref_json_reader);
   _az_PRECONDITION_NOT_NULL(out_component_name);
-  _az_PRECONDITION_NOT_NULL(property_type);
 
   (void)client;
   (void)property_type;
