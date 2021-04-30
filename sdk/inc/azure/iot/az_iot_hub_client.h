@@ -465,7 +465,6 @@ AZ_NODISCARD az_result az_iot_hub_client_methods_response_get_publish_topic(
  */
 #define AZ_IOT_HUB_CLIENT_COMMANDS_SUBSCRIBE_TOPIC AZ_IOT_HUB_CLIENT_METHODS_SUBSCRIBE_TOPIC
 
-
 /**
  * @brief A command request received from IoT Hub.
  *
@@ -695,13 +694,15 @@ AZ_NODISCARD az_result az_iot_hub_client_twin_patch_get_publish_topic(
  * @brief The MQTT topic filter to subscribe to properties operation responses.
  * @note Twin MQTT Publish messages will have QoS At most once (0).
  */
-#define AZ_IOT_HUB_CLIENT_PROPERTIES_RESPONSE_SUBSCRIBE_TOPIC AZ_IOT_HUB_CLIENT_TWIN_RESPONSE_SUBSCRIBE_TOPIC
+#define AZ_IOT_HUB_CLIENT_PROPERTIES_RESPONSE_SUBSCRIBE_TOPIC \
+  AZ_IOT_HUB_CLIENT_TWIN_RESPONSE_SUBSCRIBE_TOPIC
 
 /**
  * @brief Gets the MQTT topic filter to subscribe to desired properties changes.
  * @note Property MQTT Publish messages will have QoS At most once (0).
  */
-#define AZ_IOT_HUB_CLIENT_PROPERTIES_PATCH_SUBSCRIBE_TOPIC AZ_IOT_HUB_CLIENT_TWIN_PATCH_SUBSCRIBE_TOPIC
+#define AZ_IOT_HUB_CLIENT_PROPERTIES_PATCH_SUBSCRIBE_TOPIC \
+  AZ_IOT_HUB_CLIENT_TWIN_PATCH_SUBSCRIBE_TOPIC
 
 /**
  * @brief Properties response type.
@@ -741,8 +742,8 @@ typedef struct
  *
  * @pre \p client must not be `NULL`.
  * @pre \p received_topic must be a valid, non-empty #az_span.
- * @pre \p out_response must not be `NULL`. It must point to an #az_iot_hub_client_properties_response
- * instance.
+ * @pre \p out_response must not be `NULL`. It must point to an
+ * #az_iot_hub_client_properties_response instance.
  *
  * @return An #az_result value indicating the result of the operation.
  * @retval #AZ_OK The topic is meant for this feature and the \p out_response was populated

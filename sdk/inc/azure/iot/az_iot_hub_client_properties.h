@@ -40,7 +40,7 @@
  *
  * @note This API only builds the metadata for a component's properties.  The
  * application itself must specify the payload contents between calls
- * to this API and az_iot_hub_client_properties_builder_end_component() using 
+ * to this API and az_iot_hub_client_properties_builder_end_component() using
  * \p ref_json_writer to specify the JSON payload.
  *
  * @param[in] client The #az_iot_hub_client to use for this call.
@@ -84,8 +84,8 @@ AZ_NODISCARD az_result az_iot_hub_client_properties_builder_end_component(
 /**
  * @brief Begin a property response to a writeable property request from the service.
  *
- * This API should be used in response to an incoming writeable properties. More details can be found
- * here:
+ * This API should be used in response to an incoming writeable properties. More details can be
+ * found here:
  *
  * https://docs.microsoft.com/en-us/azure/iot-pnp/concepts-convention#writable-properties
  *
@@ -133,7 +133,7 @@ AZ_NODISCARD az_result az_iot_hub_client_properties_builder_end_component(
  *
  * @note This API only builds the metadata for the properties response.  The
  * application itself must specify the payload contents between calls
- * to this API and az_iot_hub_client_properties_builder_end_response_status() using 
+ * to this API and az_iot_hub_client_properties_builder_end_response_status() using
  * \p ref_json_writer to specify the JSON payload.
  *
  * @param[in] client The #az_iot_hub_client to use for this call.
@@ -182,7 +182,7 @@ AZ_NODISCARD az_result az_iot_hub_client_properties_builder_end_response_status(
     az_json_writer* ref_json_writer);
 
 /**
- * @brief Read the IoT Plug and Play property version.
+ * @brief Read the Azure IoT Plug and Play property version.
  *
  * @warning This modifies the state of the json reader. To then use the same json reader
  * with az_iot_hub_client_properties_get_next_component_property(), you must call
@@ -223,7 +223,7 @@ typedef enum
 } az_iot_hub_client_property_type;
 
 /**
- * @brief Iteratively read the IoT Plug and Play component properties.
+ * @brief Iteratively read the Azure IoT Plug and Play component properties.
  *
  * Note that between calls, the #az_span pointed to by \p out_component_name shall not be modified,
  * only checked and compared. Internally, the #az_span is only changed if the component name changes
@@ -269,9 +269,10 @@ typedef enum
  * @endcode
  *
  * @warning If you need to retrieve more than one \p property_type, you should first complete the
- * scan of all components for the first property type (until the API returns #AZ_ERROR_IOT_END_OF_PROPERTIES).
- * Then you must call az_json_reader_init() again after this call and before the next call to
- * az_iot_hub_client_properties_get_next_component_property with the different \p property_type.
+ * scan of all components for the first property type (until the API returns
+ * #AZ_ERROR_IOT_END_OF_PROPERTIES). Then you must call az_json_reader_init() again after this call
+ * and before the next call to az_iot_hub_client_properties_get_next_component_property with the
+ * different \p property_type.
  *
  * @param[in] client The #az_iot_hub_client to use for this call.
  * @param[in,out] ref_json_reader The #az_json_reader to parse through. The ownership of iterating
