@@ -138,9 +138,7 @@ AZ_NODISCARD az_result az_iot_hub_client_properties_builder_end_response_status(
 
   (void)client;
 
-  _az_RETURN_IF_FAILED(az_json_writer_append_end_object(ref_json_writer));
-
-  return AZ_OK;
+  return az_json_writer_append_end_object(ref_json_writer);
 }
 
 // Move reader to the value of property name
@@ -314,7 +312,7 @@ static az_result check_if_skippable(
   }
 }
 
-static bool is_invalid_json_position(
+static az_result verify_valid_json_position(
     az_json_reader* jr,
     az_iot_hub_client_properties_response_type response_type,
     az_span component_name)
@@ -324,7 +322,7 @@ static bool is_invalid_json_position(
       && (jr->token.kind != AZ_JSON_TOKEN_PROPERTY_NAME
           && jr->token.kind != AZ_JSON_TOKEN_END_OBJECT))
   {
-    return true;
+    return AZ_ERROR_JSON_INVALID_STATE;
   }
 
   // Component property - In user property value object
@@ -333,7 +331,7 @@ static bool is_invalid_json_position(
       || (response_type == AZ_IOT_HUB_CLIENT_PROPERTIES_RESPONSE_TYPE_GET
           && jr->_internal.bit_stack._internal.current_depth > 3))
   {
-    return true;
+    return AZ_ERROR_JSON_INVALID_STATE;
   }
 
   // Non-component property - In user property value object
@@ -343,10 +341,10 @@ static bool is_invalid_json_position(
           || (response_type == AZ_IOT_HUB_CLIENT_PROPERTIES_RESPONSE_TYPE_GET
               && jr->_internal.bit_stack._internal.current_depth > 2)))
   {
-    return true;
+    return AZ_ERROR_JSON_INVALID_STATE;
   }
 
-  return false;
+  return AZ_OK;
 }
 
 /*
@@ -409,11 +407,7 @@ AZ_NODISCARD az_result az_iot_hub_client_properties_get_next_component_property(
                    ((property_type == AZ_IOT_HUB_CLIENT_PROPERTY_REPORTED_FROM_DEVICE) &&
                     (response_type == AZ_IOT_HUB_CLIENT_PROPERTIES_RESPONSE_TYPE_GET)));
 
-  if (is_invalid_json_position(ref_json_reader, response_type, *out_component_name))
-  {
-    return AZ_ERROR_JSON_INVALID_STATE;
-  }
-
+  _az_RETURN_IF_FAILED(verify_valid_json_position(ref_json_reader, response_type, *out_component_name));
   _az_RETURN_IF_FAILED(process_first_move_if_needed(ref_json_reader, response_type, property_type));
 
   while (true)
