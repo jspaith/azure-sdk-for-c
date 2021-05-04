@@ -201,6 +201,8 @@ AZ_NODISCARD az_result az_iot_hub_client_properties_get_properties_version(
     int32_t* out_version)
 {
   _az_PRECONDITION_NOT_NULL(client);
+  _az_PRECONDITION_NOT_NULL(ref_json_reader);
+  _az_PRECONDITION_NOT_NULL(out_version);
 
   (void)client;
 
@@ -406,9 +408,6 @@ AZ_NODISCARD az_result az_iot_hub_client_properties_get_next_component_property(
   _az_PRECONDITION((property_type == AZ_IOT_HUB_CLIENT_PROPERTY_WRITEABLE) ||
                    ((property_type == AZ_IOT_HUB_CLIENT_PROPERTY_REPORTED_FROM_DEVICE) &&
                     (response_type == AZ_IOT_HUB_CLIENT_PROPERTIES_RESPONSE_TYPE_GET)));
-
-  (void)client;
-  (void)property_type;
 
   if (is_invalid_json_position(ref_json_reader, response_type, *out_component_name))
   {
