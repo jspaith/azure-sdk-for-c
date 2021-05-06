@@ -6,10 +6,13 @@
 #include <azure/az_core.h>
 
 #include <iot_sample_common.h>
+#include <azure/iot/az_iot_hub_client_properties.h>
 
 #include "pnp_device_info_component.h"
 
 #define DOUBLE_DECIMAL_PLACE_DIGITS 2
+
+static az_span deviceInformation_1_name = AZ_SPAN_LITERAL_FROM_STR("deviceInformation");
 
 // Reported property keys and values
 static az_span const software_version_property_name = AZ_SPAN_LITERAL_FROM_STR("swVersion");
@@ -40,6 +43,10 @@ void pnp_device_info_build_reported_property(az_span payload, az_span* out_paylo
   az_json_writer jw;
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_init(&jw, payload, NULL), log);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_begin_object(&jw), log);
+  // TODO: the 0x1 here and below technically runs (not referenced by call) but no way we even take this to PR like this never mind ship.
+  // Need to figure out how to plumb the actual client down.
+  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_iot_hub_client_properties_builder_begin_component((az_iot_hub_client const*)0x1, &jw, deviceInformation_1_name), log);
+  
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(
       az_json_writer_append_property_name(&jw, manufacturer_property_name), log);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_string(&jw, manufacturer_property_value), log);
@@ -70,6 +77,8 @@ void pnp_device_info_build_reported_property(az_span payload, az_span* out_paylo
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(
       az_json_writer_append_double(&jw, total_memory_property_value, DOUBLE_DECIMAL_PLACE_DIGITS),
       log);
+
+  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_iot_hub_client_properties_builder_end_component((az_iot_hub_client const*)0x1, &jw), log);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_end_object(&jw), log);
 
   *out_payload = az_json_writer_get_bytes_used_in_destination(&jw);
