@@ -237,16 +237,18 @@ az_result pnp_thermostat_process_property_update(
     az_span* out_payload)
 {
   double parsed_property_value = 0;
+  char const* const log = "Failed to process property update";
 
   if (!az_json_token_is_text_equal(
           &property_name_and_value->token, property_desired_temperature_property_name))
   {
+    // Ignore token, but we need to advance.  Need to investigate how to do this if nested.
+    IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_reader_next_token(property_name_and_value), log);
+    IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_reader_next_token(property_name_and_value), log);
     return false;
   }
   else
   {
-    char const* const log = "Failed to process property update";
-
     az_span property_name_span = property_name_and_value->token.slice;
     IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_reader_next_token(property_name_and_value), log);
 
