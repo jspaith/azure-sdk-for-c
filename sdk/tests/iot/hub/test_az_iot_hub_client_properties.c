@@ -987,12 +987,11 @@ typedef struct
 {
     az_span component_name;
     az_span property_name;
-    //union 
-    //{
-        double number;
-        az_span span;
-    //} data;
     az_json_token_kind token_kind;
+    // We can't use a union because we can't directly initialize 
+    // a const structure to an az_span.
+    double number;
+    az_span span;
 } test_az_properties_expected;
 
 #define TEST_PROPERTY_NUMBER_NOT_USED (-1)
@@ -1014,9 +1013,11 @@ static void test_get_next_component_property(const test_az_properties_expected* 
           client, jr, response_type, property_type, component_name),
       AZ_OK);
 
-  if (az_span_is_content_equal(TEST_PROPERTY_EMPTY_COMPONENT, expected->component_name))
+  az_span empty_component = TEST_PROPERTY_EMPTY_COMPONENT;
+  if (az_span_is_content_equal(empty_component, expected->component_name))
   {
-    assert_true(component_name == NULL);
+    az_span empty_span = AZ_SPAN_EMPTY;
+    assert_true(az_span_is_content_equal(empty_span, *component_name));
   }
   else
   {
@@ -1050,48 +1051,46 @@ static const test_az_properties_expected prop1_expected =
 {
     TEST_COMPONENT_ONE,
     AZ_SPAN_LITERAL_FROM_STR("prop_one"),
+    AZ_JSON_TOKEN_NUMBER,
     1,
-    TEST_PROPERTY_SPAN_NOT_USED,
-    AZ_JSON_TOKEN_NUMBER
+    TEST_PROPERTY_SPAN_NOT_USED
 };
 
 static const test_az_properties_expected prop2_expected = 
 {
     TEST_COMPONENT_ONE,
-    AZ_SPAN_LITERAL_FROM_STR("prop_two") ,
+    AZ_SPAN_LITERAL_FROM_STR("prop_two"),
+    AZ_JSON_TOKEN_STRING,
     TEST_PROPERTY_NUMBER_NOT_USED,
-    AZ_SPAN_LITERAL_FROM_STR("string"),
-    AZ_JSON_TOKEN_STRING
+    AZ_SPAN_LITERAL_FROM_STR("string")
 };
 
 static const test_az_properties_expected prop3_expected = 
 {
     TEST_COMPONENT_TWO,
     AZ_SPAN_LITERAL_FROM_STR("prop_three"),
+    AZ_JSON_TOKEN_NUMBER,
     45,
-    TEST_PROPERTY_SPAN_NOT_USED,
-    AZ_JSON_TOKEN_NUMBER
+    TEST_PROPERTY_SPAN_NOT_USED
 };
 
 static const test_az_properties_expected prop4_expected = 
 {
     TEST_COMPONENT_TWO,
     AZ_SPAN_LITERAL_FROM_STR("prop_four"),
+    AZ_JSON_TOKEN_STRING,
     TEST_PROPERTY_NUMBER_NOT_USED,
-    AZ_SPAN_LITERAL_FROM_STR("string"),
-    AZ_JSON_TOKEN_STRING
+    AZ_SPAN_LITERAL_FROM_STR("string")
 };
 
 static const test_az_properties_expected not_component_expected = 
 {
     TEST_PROPERTY_EMPTY_COMPONENT,
     AZ_SPAN_LITERAL_FROM_STR("not_component"),
+    AZ_JSON_TOKEN_NUMBER,
     42,
-    TEST_PROPERTY_SPAN_NOT_USED,
-    AZ_JSON_TOKEN_NUMBER
+    TEST_PROPERTY_SPAN_NOT_USED
 };
-
-
 
 static void test_az_iot_hub_client_properties_get_next_component_property_succeed()
 {
@@ -1112,7 +1111,6 @@ static void test_az_iot_hub_client_properties_get_next_component_property_succee
   // First component
   test_get_next_component_property(&prop1_expected, response_type, AZ_IOT_HUB_CLIENT_PROPERTY_WRITEABLE, &client, &jr, &component_name);
   test_get_next_component_property(&prop2_expected, response_type, AZ_IOT_HUB_CLIENT_PROPERTY_WRITEABLE, &client, &jr, &component_name);
-
 
   // Second component
   test_get_next_component_property(&prop3_expected, response_type, AZ_IOT_HUB_CLIENT_PROPERTY_WRITEABLE, &client, &jr, &component_name);
