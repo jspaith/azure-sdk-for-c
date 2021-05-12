@@ -1,6 +1,16 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // SPDX-License-Identifier: MIT
 
+/*
+ * This sample connects an Azure IoT Plug and Play enabled device with the Digital Twin Model ID
+ * (DTMI). If a timeout occurs while waiting for a message from the Azure IoT Explorer, the sample
+ * will continue. If MQTT_TIMEOUT_RECEIVE_MAX_MESSAGE_COUNT timeouts occur consecutively, the sample
+ * will disconnect. 
+ *
+ * An X509 self-certification is used for authentication.
+ *
+ */
+
 #ifdef _MSC_VER
 // warning C4204: nonstandard extension used: non-constant aggregate initializer
 #pragma warning(disable : 4204)
@@ -64,18 +74,18 @@ static char const iso_spec_time_format[] = "%Y-%m-%dT%H:%M:%SZ"; // ISO8601 Time
 // Please see the sample README for more information on this DTMI.
 static az_span const model_id = AZ_SPAN_LITERAL_FROM_STR("dtmi:com:example:Thermostat;1");
 
-// Plug and Play Connection Values
+// MQTT Connection Values
 static uint32_t connection_request_id_int = 0;
 static char connection_request_id_buffer[16];
 
-// Plug and Play Property Values
+// Property Values
 static az_span const property_success_name = AZ_SPAN_LITERAL_FROM_STR("success");
 static az_span const property_desired_temperature_name
     = AZ_SPAN_LITERAL_FROM_STR("targetTemperature");
 static az_span const property_reported_maximum_temperature_name
     = AZ_SPAN_LITERAL_FROM_STR("maxTempSinceLastReboot");
 
-// Plug and Play Command Values
+// Command Values
 static az_span const command_getMaxMinReport_name = AZ_SPAN_LITERAL_FROM_STR("getMaxMinReport");
 static az_span const command_max_temp_name = AZ_SPAN_LITERAL_FROM_STR("maxTemp");
 static az_span const command_min_temp_name = AZ_SPAN_LITERAL_FROM_STR("minTemp");
@@ -87,10 +97,10 @@ static char command_start_time_value_buffer[32];
 static char command_end_time_value_buffer[32];
 static char command_response_payload_buffer[256];
 
-// Plug and Play Telemetry Values
+// Telemetry Values
 static az_span const telemetry_temperature_name = AZ_SPAN_LITERAL_FROM_STR("temperature");
 
-// PnP Device Values
+// Device Values
 static double device_current_temperature = DEFAULT_START_TEMP_CELSIUS;
 static double device_maximum_temperature = DEFAULT_START_TEMP_CELSIUS;
 static double device_minimum_temperature = DEFAULT_START_TEMP_CELSIUS;
@@ -110,7 +120,7 @@ static void create_and_configure_mqtt_client(void);
 static void connect_mqtt_client_to_iot_hub(void);
 static void subscribe_mqtt_client_to_iot_hub_topics(void);
 static void request_all_properties(void);
-static void receive_messages(void);
+static void receive_messages_and_send_telemetry_loop(void);
 static void disconnect_mqtt_client_from_iot_hub(void);
 
 static az_span get_request_id(void);
@@ -125,7 +135,7 @@ static void process_device_property_message(
     az_span message_span,
     az_iot_hub_client_properties_response_type response_type);
 static void update_device_temperature_property(double temperature, bool* out_is_max_temp_changed);
-static void send_reported_property(az_span name, double value, int32_t version, bool confirm);
+static void send_reported_property(az_span name, double value, int32_t version, bool build_payload_with_status);
 
 // Command functions
 static void handle_command_request(
@@ -157,72 +167,6 @@ static void build_property_payload_with_status(
     az_span property_payload,
     az_span* out_property_payload);
 
-/*
- * This sample connects an Azure IoT Plug and Play enabled device with the Digital Twin Model ID
- * (DTMI). If a timeout occurs while waiting for a message from the Azure IoT Explorer, the sample
- * will continue. If MQTT_TIMEOUT_RECEIVE_MAX_MESSAGE_COUNT timeouts occur consecutively, the sample
- * will disconnect. X509 self-certification is used.
- *
- * To interact with this sample, you must use the Azure IoT Explorer. The capabilities are Device
- * Properties, Command, and Telemetry:
- *
- * Device Properties: Two device properties are supported in this sample.
- *   - A desired property named `targetTemperature` with a `double` value for the desired
- * temperature.
- *   - A reported property named `maxTempSinceLastReboot` with a `double` value for the highest
- * temperature reached since device boot.
- *
- * To send a device desired property message, select your device's Device Twin tab in the Azure
- * IoT Explorer. Add the property targetTemperature along with a corresponding value to the desired
- * section of the JSON. Select Save to update the twin document and send the twin message to the
- * device.
- *   {
- *     "properties": {
- *       "desired": {
- *         "targetTemperature": 68.5,
- *       }
- *     }
- *   }
- *
- * Upon receiving a desired property message, the sample will update the property locally and
- * send a reported property of the same name back to the service. This message will include a set of
- * "ack" values: `ac` for the HTTP-like ack code, `av` for ack version of the property, and an
- * optional `ad` for an ack description.
- *   {
- *     "properties": {
- *       "reported": {
- *         "targetTemperature": {
- *           "value": 68.5,
- *           "ac": 200,
- *           "av": 14,
- *           "ad": "success"
- *         },
- *         "maxTempSinceLastReboot": 74.3,
- *       }
- *     }
- *   }
- *
- * Command: One device command is supported in this sample: `getMaxMinReport`. If
- * any other commands are attempted to be invoked, the log will report the command is not found. To
- * invoke a command, select your device's Direct Method tab in the Azure IoT Explorer. Enter the
- * command name `getMaxMinReport` along with a payload using an ISO8061 time format and select
- * Invoke method.
- *
- *   "2020-08-18T17:09:29-0700"
- *
- * The command will send back to the service a response containing the following JSON payload with
- * updated values in each field:
- *   {
- *     "maxTemp": 74.3,
- *     "minTemp": 65.2,
- *     "avgTemp": 68.79,
- *     "startTime": "2020-08-18T17:09:29-0700",
- *     "endTime": "2020-08-18T17:24:32-0700"
- *   }
- *
- * Telemetry: Device sends a JSON message with the field name `temperature` and the `double` value
- * of the current temperature.
- */
 int main(void)
 {
   create_and_configure_mqtt_client();
@@ -235,7 +179,7 @@ int main(void)
   IOT_SAMPLE_LOG_SUCCESS("Client subscribed to IoT Hub topics.");
 
   request_all_properties();
-  receive_messages();
+  receive_messages_and_send_telemetry_loop();
 
   disconnect_mqtt_client_from_iot_hub();
   IOT_SAMPLE_LOG_SUCCESS("Client disconnected from IoT Hub.");
@@ -243,6 +187,9 @@ int main(void)
   return 0;
 }
 
+// create_and_configure_mqtt_client reads configuration variables from the environment,
+// makes calls to the Azure SDK for C for initial setup, and initiates an MQTT client
+// from Paho.
 static void create_and_configure_mqtt_client(void)
 {
   int rc;
@@ -285,6 +232,8 @@ static void create_and_configure_mqtt_client(void)
   }
 }
 
+// connect_mqtt_client_to_iot_hub sets up basic security and MQTT topics and then
+// initiates an MQTT connection
 static void connect_mqtt_client_to_iot_hub(void)
 {
   int rc;
@@ -297,6 +246,8 @@ static void connect_mqtt_client_to_iot_hub(void)
     IOT_SAMPLE_LOG_ERROR("Failed to get MQTT client username: az_result return code 0x%08x.", rc);
     exit(rc);
   }
+  
+  IOT_SAMPLE_LOG("MQTT client username: %s\n", mqtt_client_username_buffer);
 
   // Set MQTT connection options.
   MQTTClient_connectOptions mqtt_connect_options = MQTTClient_connectOptions_initializer;
@@ -315,7 +266,8 @@ static void connect_mqtt_client_to_iot_hub(void)
   }
   mqtt_connect_options.ssl = &mqtt_ssl_options;
 
-  // Connect MQTT client to the Azure IoT Hub.
+  // Connect MQTT client to the Azure IoT Hub.  This will block until the connection 
+  // is established or fails.
   rc = MQTTClient_connect(mqtt_client, &mqtt_connect_options);
   if (rc != MQTTCLIENT_SUCCESS)
   {
@@ -328,6 +280,8 @@ static void connect_mqtt_client_to_iot_hub(void)
   }
 }
 
+// subscribe_mqtt_client_to_iot_hub_topics subscribes to well-known MQTT topics that Azure IoT Hub
+// uses to signal incoming commands to the device and notify device of properties.
 static void subscribe_mqtt_client_to_iot_hub_topics(void)
 {
   int rc;
@@ -360,6 +314,9 @@ static void subscribe_mqtt_client_to_iot_hub_topics(void)
   }
 }
 
+// request_all_properties sends a request to Azure IoT Hub to request all properties for
+// the device.  This call does not block.  Properties will be received on 
+// a topic previously responded to.
 static void request_all_properties(void)
 {
   az_result rc;
@@ -380,7 +337,10 @@ static void request_all_properties(void)
   publish_mqtt_message(property_document_topic_buffer, AZ_SPAN_EMPTY, IOT_SAMPLE_MQTT_PUBLISH_QOS);
 }
 
-static void receive_messages(void)
+// receive_messages_and_send_telemetry_loop will loop to check if there are incoming MQTT 
+// messages, waiting up to MQTT_TIMEOUT_RECEIVE_MS.  It will also send a telemetry message
+// every time through the loop.
+static void receive_messages_and_send_telemetry_loop(void)
 {
   char* topic = NULL;
   int topic_len = 0;
@@ -435,6 +395,7 @@ static void receive_messages(void)
   }
 }
 
+// disconnect_mqtt_client_from_iot_hub disconnects and destroys the underlying MQTT connection and Paho handle.
 static void disconnect_mqtt_client_from_iot_hub(void)
 {
   int rc = MQTTClient_disconnect(mqtt_client, MQTT_TIMEOUT_DISCONNECT_MS);
@@ -447,18 +408,22 @@ static void disconnect_mqtt_client_from_iot_hub(void)
   MQTTClient_destroy(&mqtt_client);
 }
 
+// get_request_id sets a request Id into connection_request_id_buffer and monotonically 
+// increases the counter for the next query.
 static az_span get_request_id(void)
 {
   az_span remainder;
   az_span out_span = az_span_create(
       (uint8_t*)connection_request_id_buffer, sizeof(connection_request_id_buffer));
 
+  // TODO: What happens when this loops?  Shouldn't this be 16 bit in any case?
   az_result rc = az_span_u32toa(out_span, connection_request_id_int++, &remainder);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Failed to get request id");
 
   return az_span_slice(out_span, 0, az_span_size(out_span) - az_span_size(remainder));
 }
 
+// publish_mqtt_message is a wrapper to the underlying Paho PUBLISH method
 static void publish_mqtt_message(const char* topic, az_span payload, int qos)
 {
   int rc = MQTTClient_publish(
@@ -470,6 +435,7 @@ static void publish_mqtt_message(const char* topic, az_span payload, int qos)
   }
 }
 
+// on_message_received dispatches an MQTT message when the underlying MQTT stack provides one to us
 static void on_message_received(char* topic, int topic_len, MQTTClient_message const* message)
 {
   az_result rc;
@@ -481,6 +447,9 @@ static void on_message_received(char* topic, int topic_len, MQTTClient_message c
   az_iot_hub_client_command_request command_request;
 
   // Parse the incoming message topic and handle appropriately.
+  // Note that if a topic does not match - e.g. az_iot_hub_client_properties_parse_received_topic is invoked
+  // to process a command message - the function returns AZ_ERROR_IOT_TOPIC_NO_MATCH.  This is NOT a fatal
+  // error but is used to indicate to the caller to see if the topic matches other topics.
   rc = az_iot_hub_client_properties_parse_received_topic(
       &hub_client, topic_span, &property_response);
   if (az_result_succeeded(rc))
@@ -512,6 +481,7 @@ static void on_message_received(char* topic, int topic_len, MQTTClient_message c
   }
 }
 
+// handle_device_property_message handles incoming properties from Azure IoT Hub.
 static void handle_device_property_message(
     MQTTClient_message const* message,
     az_iot_hub_client_properties_response const* property_response)
@@ -540,6 +510,7 @@ static void handle_device_property_message(
   }
 }
 
+// process_device_property_message handles incoming properties from Azure IoT Hub.
 static void process_device_property_message(
     az_span message_span,
     az_iot_hub_client_properties_response_type response_type)
@@ -559,11 +530,14 @@ static void process_device_property_message(
   double desired_temperature;
   az_span component_name;
 
+  // Applications call az_iot_hub_client_properties_get_next_component_property to enumerate
+  // properties received.
   while (az_result_succeeded(az_iot_hub_client_properties_get_next_component_property(
       &hub_client, &jr, response_type, AZ_IOT_HUB_CLIENT_PROPERTY_WRITEABLE, &component_name)))
   {
     if (az_json_token_is_text_equal(&jr.token, property_desired_temperature_name))
     {
+      // Process an update for desired temperature.
       rc = az_json_reader_next_token(&jr);
       if (az_result_failed(rc))
       {
@@ -578,19 +552,17 @@ static void process_device_property_message(
 
       IOT_SAMPLE_LOG(" "); // Formatting
 
-      bool confirm = true;
       bool is_max_temp_changed;
 
       // Update device temperature locally and report update to server.
       update_device_temperature_property(desired_temperature, &is_max_temp_changed);
       send_reported_property(
-          property_desired_temperature_name, desired_temperature, version_number, confirm);
+          property_desired_temperature_name, desired_temperature, version_number, true);
 
       if (is_max_temp_changed)
       {
-        confirm = false;
         send_reported_property(
-            property_reported_maximum_temperature_name, device_maximum_temperature, -1, confirm);
+            property_reported_maximum_temperature_name, device_maximum_temperature, 0, false);
       }
 
       // Skip to next property value
@@ -627,13 +599,10 @@ static void process_device_property_message(
   }
 }
 
+// update_device_temperature_property updates the simulated device temperature as well
+// as the temperature's statistics over time
 static void update_device_temperature_property(double temperature, bool* out_is_max_temp_changed)
 {
-  if (device_maximum_temperature < device_minimum_temperature)
-  {
-    exit(1);
-  }
-
   *out_is_max_temp_changed = false;
   device_current_temperature = temperature;
 
@@ -660,7 +629,8 @@ static void update_device_temperature_property(double temperature, bool* out_is_
   IOT_SAMPLE_LOG("Average Temperature: %2f", device_average_temperature);
 }
 
-static void send_reported_property(az_span name, double value, int32_t version, bool confirm)
+// send_reported_property builds a property payload reporting device state and then sends it to Azure IoT Hub. 
+static void send_reported_property(az_span name, double value, int32_t version, bool build_payload_with_status)
 {
   az_result rc;
 
@@ -678,7 +648,7 @@ static void send_reported_property(az_span name, double value, int32_t version, 
   char reported_property_payload_buffer[128];
   az_span reported_property_payload = AZ_SPAN_FROM_BUFFER(reported_property_payload_buffer);
 
-  if (confirm)
+  if (build_payload_with_status)
   {
     build_property_payload_with_status(
         name,
@@ -706,6 +676,7 @@ static void send_reported_property(az_span name, double value, int32_t version, 
   IOT_SAMPLE_LOG_AZ_SPAN("Payload:", reported_property_payload);
 }
 
+// handle_command_request handles an incoming command from Azure IoT Hub
 static void handle_command_request(
     MQTTClient_message const* message,
     az_iot_hub_client_command_request const* command_request)
@@ -737,6 +708,7 @@ static void handle_command_request(
   }
 }
 
+// send_command_response sends a response to a command invoked by Azure IoT Hub
 static void send_command_response(
     az_iot_hub_client_command_request const* command_request,
     az_iot_status status,
@@ -762,23 +734,25 @@ static void send_command_response(
   IOT_SAMPLE_LOG_AZ_SPAN("Payload:", response);
 }
 
+// invoke_getMaxMinReport implements the handling for device method to retrieve statitics
+// about the device's temperature.  
 static bool invoke_getMaxMinReport(az_span payload, az_span response, az_span* out_response)
 {
   int32_t incoming_since_value_len = 0;
 
   // Parse the `since` field in the payload.
-  char const* const log = "Failed to parse for `since` field in payload";
+  char const* const log_message = "Failed to parse for `since` field in payload";
 
   az_json_reader jr;
-  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_reader_init(&jr, payload, NULL), log);
-  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_reader_next_token(&jr), log);
+  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_reader_init(&jr, payload, NULL), log_message);
+  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_reader_next_token(&jr), log_message);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(
       az_json_token_get_string(
           &jr.token,
           command_start_time_value_buffer,
           sizeof(command_start_time_value_buffer),
           &incoming_since_value_len),
-      log);
+      log_message);
 
   // Set the response payload to error if the `since` value was empty.
   if (incoming_since_value_len == 0)
@@ -818,6 +792,8 @@ static bool invoke_getMaxMinReport(az_span payload, az_span response, az_span* o
   return true;
 }
 
+// send_telemetry_message builds the body of a telemetry message containing the current temperature
+// and then sends it to Azure IoT Hub
 static void send_telemetry_message(void)
 {
   az_result rc;
@@ -843,6 +819,8 @@ static void send_telemetry_message(void)
   IOT_SAMPLE_LOG_AZ_SPAN("Payload:", telemetry_payload);
 }
 
+// build_property_payload builds a desired JSON payload.  The JSON built just needs to conform to the
+// DTDLv2 that defined it.   
 static void build_property_payload(
     uint8_t property_count,
     az_span const names[],
@@ -851,33 +829,36 @@ static void build_property_payload(
     az_span property_payload,
     az_span* out_property_payload)
 {
-  char const* const log = "Failed to build property payload";
+  char const* const log_message = "Failed to build property payload";
 
   az_json_writer jw;
-  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_init(&jw, property_payload, NULL), log);
-  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_begin_object(&jw), log);
+  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_init(&jw, property_payload, NULL), log_message);
+  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_begin_object(&jw), log_message);
 
   for (uint8_t i = 0; i < property_count; i++)
   {
-    IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_property_name(&jw, names[i]), log);
+    IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_property_name(&jw, names[i]), log_message);
     IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-        az_json_writer_append_double(&jw, values[i], DOUBLE_DECIMAL_PLACE_DIGITS), log);
+        az_json_writer_append_double(&jw, values[i], DOUBLE_DECIMAL_PLACE_DIGITS), log_message);
   }
 
   if (times != NULL)
   {
     IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-        az_json_writer_append_property_name(&jw, command_start_time_name), log);
-    IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_string(&jw, times[0]), log);
+        az_json_writer_append_property_name(&jw, command_start_time_name), log_message);
+    IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_string(&jw, times[0]), log_message);
     IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-        az_json_writer_append_property_name(&jw, command_end_time_name), log);
-    IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_string(&jw, times[1]), log);
+        az_json_writer_append_property_name(&jw, command_end_time_name), log_message);
+    IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_string(&jw, times[1]), log_message);
   }
 
-  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_end_object(&jw), log);
+  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_end_object(&jw), log_message);
   *out_property_payload = az_json_writer_get_bytes_used_in_destination(&jw);
 }
 
+// build_property_payload_with_status builds a desired JSON status.  This payload is invoked
+// in response to a desired property, e.g. when the device signals its availability to process
+// a desired temperature request.
 static void build_property_payload_with_status(
     az_span name,
     double value,
@@ -887,20 +868,29 @@ static void build_property_payload_with_status(
     az_span property_payload,
     az_span* out_property_payload)
 {
-  char const* const log = "Failed to build property payload with status";
+  char const* const log_message = "Failed to build property payload with status";
 
   az_json_writer jw;
-  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_init(&jw, property_payload, NULL), log);
-  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_begin_object(&jw), log);
+  // First initialize the az_json_writer object, as in all JSON writes.
+  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_init(&jw, property_payload, NULL), log_message);
+  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_begin_object(&jw), log_message);
+  // Responding to a desired property requires additional metadata embedded in the JSON payload.
+  // The az_iot_hub_client_properties_builder_begin_response_status will write this metadata
+  // to the az_json_writer.
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(
       az_iot_hub_client_properties_builder_begin_response_status(
           &hub_client, &jw, name, ack_code_value, ack_version_value, ack_description_value),
-      log);
+      log_message);
+  // At this point the application writes the value of the desired property is it is operating over.
+  // In this sample it is the double indicating the desired temperature, though in general
+  // it should conform to the DTDLv2 definition.
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-      az_json_writer_append_double(&jw, value, DOUBLE_DECIMAL_PLACE_DIGITS), log);
+      az_json_writer_append_double(&jw, value, DOUBLE_DECIMAL_PLACE_DIGITS), log_message);
+  // After writing the value, az_iot_hub_client_properties_builder_end_response_status is used
+  // to close the property in JSON.
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-      az_iot_hub_client_properties_builder_end_response_status(&hub_client, &jw), log);
-  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_end_object(&jw), log);
+      az_iot_hub_client_properties_builder_end_response_status(&hub_client, &jw), log_message);
+  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_end_object(&jw), log_message);
 
   *out_property_payload = az_json_writer_get_bytes_used_in_destination(&jw);
 }

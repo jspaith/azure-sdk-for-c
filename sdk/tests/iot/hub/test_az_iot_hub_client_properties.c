@@ -17,6 +17,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <math.h>
+
 #include <cmocka.h>
 
 #define TEST_SPAN_BUFFER_SIZE 128
@@ -25,7 +27,11 @@ static const az_span test_device_id = AZ_SPAN_LITERAL_FROM_STR("my_device");
 static const az_span test_device_hostname = AZ_SPAN_LITERAL_FROM_STR("myiothub.azure-devices.net");
 static const az_span test_model_id
     = AZ_SPAN_LITERAL_FROM_STR("dtmi:YOUR_COMPANY_NAME_HERE:sample_device;1");
-static az_span test_component_one = AZ_SPAN_LITERAL_FROM_STR("component_one");
+static const az_span test_component_one = AZ_SPAN_LITERAL_FROM_STR("component_one");
+#define TEST_COMPONENT_ONE AZ_SPAN_LITERAL_FROM_STR("component_one")
+#define TEST_COMPONENT_TWO AZ_SPAN_LITERAL_FROM_STR("component_two")
+
+
 static az_span test_component_two = AZ_SPAN_LITERAL_FROM_STR("component_two");
 static az_span test_components[]
     = { AZ_SPAN_LITERAL_FROM_STR("component_one"), AZ_SPAN_LITERAL_FROM_STR("component_two") };
@@ -174,13 +180,18 @@ static const az_span test_property_payload_out_of_order = AZ_SPAN_LITERAL_FROM_S
 }
 
 */
-static const az_span test_property_payload_long = AZ_SPAN_LITERAL_FROM_STR(
-    "{\"desired\":{\"thermostat2\":{\"__t\":\"c\",\"targetTemperature\":50},\"thermostat1\":{\"__"
-    "t\":\"c\",\"targetTemperature\":90},\"targetTemperature\":54,\"$version\":30},\"reported\":{"
-    "\"manufacturer\":\"Sample-Manufacturer\",\"model\":\"pnp-sample-Model-123\",\"swVersion\":\"1."
-    "0.0.0\",\"osName\":\"Contoso\",\"processorArchitecture\":\"Contoso-Arch-64bit\","
-    "\"processorManufacturer\":\"Processor "
-    "Manufacturer(TM)\",\"totalStorage\":1024,\"totalMemory\":128}}");
+
+#define TEST_PROPERTY_PAYLOAD_LONG_STR \
+    "{\"desired\":{\"thermostat2\":{\"__t\":\"c\",\"targetTemperature\":50},\"thermostat1\":{\"__" \
+    "t\":\"c\",\"targetTemperature\":90},\"targetTemperature\":54,\"$version\":30},\"reported\":{" \
+    "\"manufacturer\":\"Sample-Manufacturer\",\"model\":\"pnp-sample-Model-123\",\"swVersion\":\"1." \
+    "0.0.0\",\"osName\":\"Contoso\",\"processorArchitecture\":\"Contoso-Arch-64bit\"," \
+    "\"processorManufacturer\":\"Processor " \
+    "Manufacturer(TM)\",\"totalStorage\":1024,\"totalMemory\":128}}"
+
+#define TEST_PROPERTY_PAYLOAD_LONG_STR_LEN (sizeof(TEST_PROPERTY_PAYLOAD_LONG_STR) - 1)
+
+static const az_span test_property_payload_long = AZ_SPAN_LITERAL_FROM_STR(TEST_PROPERTY_PAYLOAD_LONG_STR);
 static az_span test_temp_component_one = AZ_SPAN_LITERAL_FROM_STR("thermostat1");
 static az_span test_temp_component_two = AZ_SPAN_LITERAL_FROM_STR("thermostat2");
 static az_span test_temperature_components[]
@@ -972,6 +983,116 @@ static void test_az_iot_hub_client_properties_get_properties_version_out_of_orde
   assert_int_equal(version, 4);
 }
 
+typedef struct 
+{
+    az_span component_name;
+    az_span property_name;
+    //union 
+    //{
+        double number;
+        az_span span;
+    //} data;
+    az_json_token_kind token_kind;
+} test_az_properties_expected;
+
+#define TEST_PROPERTY_NUMBER_NOT_USED (-1)
+// TEST_PROPERTY_EMPTY_COMPONENT cannot just be AZ_EMPTY_SPAN as its put into a const struct
+#define TEST_PROPERTY_EMPTY_COMPONENT AZ_SPAN_LITERAL_FROM_STR("$$--empty--component--$$")
+#define TEST_PROPERTY_SPAN_NOT_USED AZ_SPAN_LITERAL_FROM_STR("not_used")
+
+// get_next_component_property verifies that the property we read next is expected,
+// advancing the underlying az_json_reader as it goes.
+static void test_get_next_component_property(const test_az_properties_expected* expected, 
+    az_iot_hub_client_properties_response_type response_type, 
+    az_iot_hub_client_property_type property_type,
+    az_iot_hub_client* client, 
+    az_json_reader* jr,
+    az_span* component_name)
+{
+  assert_int_equal(
+      az_iot_hub_client_properties_get_next_component_property(
+          client, jr, response_type, property_type, component_name),
+      AZ_OK);
+
+  if (az_span_is_content_equal(TEST_PROPERTY_EMPTY_COMPONENT, expected->component_name))
+  {
+    assert_true(component_name == NULL);
+  }
+  else
+  {
+    assert_true(az_span_is_content_equal(*component_name, expected->component_name));
+  }
+
+  assert_true(az_json_token_is_text_equal(&jr->token, expected->property_name));
+  assert_int_equal(az_json_reader_next_token(jr), AZ_OK);
+  assert_int_equal(jr->token.kind, expected->token_kind);
+
+  if (jr->token.kind == AZ_JSON_TOKEN_NUMBER)
+  {
+    double d;
+    assert_int_equal(az_json_token_get_double(&jr->token, &d), AZ_OK);
+    assert_true(fabs(d - expected->number) < 1e-2);
+  }
+  else if (jr->token.kind == AZ_JSON_TOKEN_STRING)
+  {
+    assert_true(az_json_token_is_text_equal(&jr->token, expected->span));
+  }
+  else
+  {
+    assert_false(true);
+  }
+
+  // Advance
+  assert_int_equal(az_json_reader_next_token(jr), AZ_OK);
+}
+
+static const test_az_properties_expected prop1_expected = 
+{
+    TEST_COMPONENT_ONE,
+    AZ_SPAN_LITERAL_FROM_STR("prop_one"),
+    1,
+    TEST_PROPERTY_SPAN_NOT_USED,
+    AZ_JSON_TOKEN_NUMBER
+};
+
+static const test_az_properties_expected prop2_expected = 
+{
+    TEST_COMPONENT_ONE,
+    AZ_SPAN_LITERAL_FROM_STR("prop_two") ,
+    TEST_PROPERTY_NUMBER_NOT_USED,
+    AZ_SPAN_LITERAL_FROM_STR("string"),
+    AZ_JSON_TOKEN_STRING
+};
+
+static const test_az_properties_expected prop3_expected = 
+{
+    TEST_COMPONENT_TWO,
+    AZ_SPAN_LITERAL_FROM_STR("prop_three"),
+    45,
+    TEST_PROPERTY_SPAN_NOT_USED,
+    AZ_JSON_TOKEN_NUMBER
+};
+
+static const test_az_properties_expected prop4_expected = 
+{
+    TEST_COMPONENT_TWO,
+    AZ_SPAN_LITERAL_FROM_STR("prop_four"),
+    TEST_PROPERTY_NUMBER_NOT_USED,
+    AZ_SPAN_LITERAL_FROM_STR("string"),
+    AZ_JSON_TOKEN_STRING
+};
+
+static const test_az_properties_expected not_component_expected = 
+{
+    TEST_PROPERTY_EMPTY_COMPONENT,
+    AZ_SPAN_LITERAL_FROM_STR("not_component"),
+    42,
+    TEST_PROPERTY_SPAN_NOT_USED,
+    AZ_JSON_TOKEN_NUMBER
+};
+
+
+
 static void test_az_iot_hub_client_properties_get_next_component_property_succeed()
 {
   az_iot_hub_client client;
@@ -987,72 +1108,16 @@ static void test_az_iot_hub_client_properties_get_next_component_property_succee
   az_iot_hub_client_properties_response_type response_type
       = AZ_IOT_HUB_CLIENT_PROPERTIES_RESPONSE_TYPE_DESIRED_PROPERTIES;
   az_span component_name;
-  int32_t value;
 
   // First component
-  assert_int_equal(
-      az_iot_hub_client_properties_get_next_component_property(
-          &client, &jr, response_type, AZ_IOT_HUB_CLIENT_PROPERTY_WRITEABLE, &component_name),
-      AZ_OK);
-  assert_true(az_span_is_content_equal(component_name, test_component_one));
-  assert_true(az_json_token_is_text_equal(&jr.token, AZ_SPAN_FROM_STR("prop_one")));
-  assert_int_equal(az_json_reader_next_token(&jr), AZ_OK);
-  assert_int_equal(az_json_token_get_int32(&jr.token, &value), AZ_OK);
-  assert_int_equal(value, 1);
+  test_get_next_component_property(&prop1_expected, response_type, AZ_IOT_HUB_CLIENT_PROPERTY_WRITEABLE, &client, &jr, &component_name);
+  test_get_next_component_property(&prop2_expected, response_type, AZ_IOT_HUB_CLIENT_PROPERTY_WRITEABLE, &client, &jr, &component_name);
 
-  // Advance
-  assert_int_equal(az_json_reader_next_token(&jr), AZ_OK);
-
-  assert_int_equal(
-      az_iot_hub_client_properties_get_next_component_property(
-          &client, &jr, response_type, AZ_IOT_HUB_CLIENT_PROPERTY_WRITEABLE, &component_name),
-      AZ_OK);
-  assert_true(az_span_is_content_equal(component_name, test_component_one));
-  assert_true(az_json_token_is_text_equal(&jr.token, AZ_SPAN_FROM_STR("prop_two")));
-  assert_int_equal(az_json_reader_next_token(&jr), AZ_OK);
-  assert_true(az_json_token_is_text_equal(&jr.token, AZ_SPAN_FROM_STR("string")));
-
-  // Advance
-  assert_int_equal(az_json_reader_next_token(&jr), AZ_OK);
 
   // Second component
-  assert_int_equal(
-      az_iot_hub_client_properties_get_next_component_property(
-          &client, &jr, response_type, AZ_IOT_HUB_CLIENT_PROPERTY_WRITEABLE, &component_name),
-      AZ_OK);
-  assert_true(az_span_is_content_equal(component_name, test_component_two));
-  assert_true(az_json_token_is_text_equal(&jr.token, AZ_SPAN_FROM_STR("prop_three")));
-  assert_int_equal(az_json_reader_next_token(&jr), AZ_OK);
-  assert_int_equal(az_json_token_get_int32(&jr.token, &value), AZ_OK);
-  assert_int_equal(value, 45);
-
-  // Advance
-  assert_int_equal(az_json_reader_next_token(&jr), AZ_OK);
-
-  assert_int_equal(
-      az_iot_hub_client_properties_get_next_component_property(
-          &client, &jr, response_type, AZ_IOT_HUB_CLIENT_PROPERTY_WRITEABLE, &component_name),
-      AZ_OK);
-  assert_true(az_json_token_is_text_equal(&jr.token, AZ_SPAN_FROM_STR("prop_four")));
-  assert_int_equal(az_json_reader_next_token(&jr), AZ_OK);
-  assert_true(az_json_token_is_text_equal(&jr.token, AZ_SPAN_FROM_STR("string")));
-
-  // Advance
-  assert_int_equal(az_json_reader_next_token(&jr), AZ_OK);
-
-  // Not a component
-  assert_int_equal(
-      az_iot_hub_client_properties_get_next_component_property(
-          &client, &jr, response_type, AZ_IOT_HUB_CLIENT_PROPERTY_WRITEABLE, &component_name),
-      AZ_OK);
-  assert_true(az_span_is_content_equal(component_name, AZ_SPAN_EMPTY));
-  assert_true(az_json_token_is_text_equal(&jr.token, AZ_SPAN_FROM_STR("not_component")));
-  assert_int_equal(az_json_reader_next_token(&jr), AZ_OK);
-  assert_int_equal(az_json_token_get_int32(&jr.token, &value), AZ_OK);
-  assert_int_equal(value, 42);
-
-  // Advance
-  assert_int_equal(az_json_reader_next_token(&jr), AZ_OK);
+  test_get_next_component_property(&prop3_expected, response_type, AZ_IOT_HUB_CLIENT_PROPERTY_WRITEABLE, &client, &jr, &component_name);
+  test_get_next_component_property(&prop4_expected, response_type, AZ_IOT_HUB_CLIENT_PROPERTY_WRITEABLE, &client, &jr, &component_name);
+  test_get_next_component_property(&not_component_expected, response_type, AZ_IOT_HUB_CLIENT_PROPERTY_WRITEABLE, &client, &jr, &component_name);
 
   // End of components (skipping version)
   assert_int_equal(
@@ -1469,6 +1534,71 @@ static void test_az_iot_hub_client_properties_get_next_component_property_long_s
 }
 
 static void
+test_long_with_version_impl(az_iot_hub_client client, az_json_reader jr)
+{
+    az_iot_hub_client_properties_response_type response_type
+        = AZ_IOT_HUB_CLIENT_PROPERTIES_RESPONSE_TYPE_GET;
+    int32_t version;
+    assert_int_equal(
+        az_iot_hub_client_properties_get_properties_version(&client, &jr, response_type, &version),
+        AZ_OK);
+    assert_int_equal(version, 30);
+    
+    assert_int_equal(az_json_reader_init(&jr, test_property_payload_long, NULL), AZ_OK);
+    
+    az_span component_name;
+    int32_t value;
+    // First component
+    assert_int_equal(
+        az_iot_hub_client_properties_get_next_component_property(
+            &client, &jr, response_type, AZ_IOT_HUB_CLIENT_PROPERTY_WRITEABLE, &component_name),
+        AZ_OK);
+    assert_true(az_span_is_content_equal(component_name, test_temp_component_two));
+    assert_true(az_json_token_is_text_equal(&jr.token, AZ_SPAN_FROM_STR("targetTemperature")));
+    assert_int_equal(az_json_reader_next_token(&jr), AZ_OK);
+    assert_int_equal(az_json_token_get_int32(&jr.token, &value), AZ_OK);
+    assert_int_equal(value, 50);
+    
+    // Advance
+    assert_int_equal(az_json_reader_next_token(&jr), AZ_OK);
+    
+    // Second component
+    assert_int_equal(
+        az_iot_hub_client_properties_get_next_component_property(
+            &client, &jr, response_type, AZ_IOT_HUB_CLIENT_PROPERTY_WRITEABLE, &component_name),
+        AZ_OK);
+    assert_true(az_span_is_content_equal(component_name, test_temp_component_one));
+    assert_true(az_json_token_is_text_equal(&jr.token, AZ_SPAN_FROM_STR("targetTemperature")));
+    assert_int_equal(az_json_reader_next_token(&jr), AZ_OK);
+    assert_int_equal(az_json_token_get_int32(&jr.token, &value), AZ_OK);
+    assert_int_equal(value, 90);
+    
+    // Advance
+    assert_int_equal(az_json_reader_next_token(&jr), AZ_OK);
+    
+    // Not a component
+    assert_int_equal(
+        az_iot_hub_client_properties_get_next_component_property(
+            &client, &jr, response_type, AZ_IOT_HUB_CLIENT_PROPERTY_WRITEABLE, &component_name),
+        AZ_OK);
+    assert_true(az_span_is_content_equal(component_name, AZ_SPAN_EMPTY));
+    assert_true(az_json_token_is_text_equal(&jr.token, AZ_SPAN_FROM_STR("targetTemperature")));
+    assert_int_equal(az_json_reader_next_token(&jr), AZ_OK);
+    assert_int_equal(az_json_token_get_int32(&jr.token, &value), AZ_OK);
+    assert_int_equal(value, 54);
+    
+    // Advance
+    assert_int_equal(az_json_reader_next_token(&jr), AZ_OK);
+    
+    // End of components (skipping version and reported properties section)
+    assert_int_equal(
+        az_iot_hub_client_properties_get_next_component_property(
+            &client, &jr, response_type, AZ_IOT_HUB_CLIENT_PROPERTY_WRITEABLE, &component_name),
+        AZ_ERROR_IOT_END_OF_PROPERTIES);
+
+}
+
+static void
 test_az_iot_hub_client_properties_get_next_component_property_long_with_version_succeed()
 {
   az_iot_hub_client client;
@@ -1481,66 +1611,43 @@ test_az_iot_hub_client_properties_get_next_component_property_long_with_version_
   az_json_reader jr;
   assert_int_equal(az_json_reader_init(&jr, test_property_payload_long, NULL), AZ_OK);
 
-  az_iot_hub_client_properties_response_type response_type
-      = AZ_IOT_HUB_CLIENT_PROPERTIES_RESPONSE_TYPE_GET;
-  int32_t version;
-  assert_int_equal(
-      az_iot_hub_client_properties_get_properties_version(&client, &jr, response_type, &version),
-      AZ_OK);
-  assert_int_equal(version, 30);
-
-  assert_int_equal(az_json_reader_init(&jr, test_property_payload_long, NULL), AZ_OK);
-
-  az_span component_name;
-  int32_t value;
-  // First component
-  assert_int_equal(
-      az_iot_hub_client_properties_get_next_component_property(
-          &client, &jr, response_type, AZ_IOT_HUB_CLIENT_PROPERTY_WRITEABLE, &component_name),
-      AZ_OK);
-  assert_true(az_span_is_content_equal(component_name, test_temp_component_two));
-  assert_true(az_json_token_is_text_equal(&jr.token, AZ_SPAN_FROM_STR("targetTemperature")));
-  assert_int_equal(az_json_reader_next_token(&jr), AZ_OK);
-  assert_int_equal(az_json_token_get_int32(&jr.token, &value), AZ_OK);
-  assert_int_equal(value, 50);
-
-  // Advance
-  assert_int_equal(az_json_reader_next_token(&jr), AZ_OK);
-
-  // Second component
-  assert_int_equal(
-      az_iot_hub_client_properties_get_next_component_property(
-          &client, &jr, response_type, AZ_IOT_HUB_CLIENT_PROPERTY_WRITEABLE, &component_name),
-      AZ_OK);
-  assert_true(az_span_is_content_equal(component_name, test_temp_component_one));
-  assert_true(az_json_token_is_text_equal(&jr.token, AZ_SPAN_FROM_STR("targetTemperature")));
-  assert_int_equal(az_json_reader_next_token(&jr), AZ_OK);
-  assert_int_equal(az_json_token_get_int32(&jr.token, &value), AZ_OK);
-  assert_int_equal(value, 90);
-
-  // Advance
-  assert_int_equal(az_json_reader_next_token(&jr), AZ_OK);
-
-  // Not a component
-  assert_int_equal(
-      az_iot_hub_client_properties_get_next_component_property(
-          &client, &jr, response_type, AZ_IOT_HUB_CLIENT_PROPERTY_WRITEABLE, &component_name),
-      AZ_OK);
-  assert_true(az_span_is_content_equal(component_name, AZ_SPAN_EMPTY));
-  assert_true(az_json_token_is_text_equal(&jr.token, AZ_SPAN_FROM_STR("targetTemperature")));
-  assert_int_equal(az_json_reader_next_token(&jr), AZ_OK);
-  assert_int_equal(az_json_token_get_int32(&jr.token, &value), AZ_OK);
-  assert_int_equal(value, 54);
-
-  // Advance
-  assert_int_equal(az_json_reader_next_token(&jr), AZ_OK);
-
-  // End of components (skipping version and reported properties section)
-  assert_int_equal(
-      az_iot_hub_client_properties_get_next_component_property(
-          &client, &jr, response_type, AZ_IOT_HUB_CLIENT_PROPERTY_WRITEABLE, &component_name),
-      AZ_ERROR_IOT_END_OF_PROPERTIES);
+  test_long_with_version_impl(client, jr);
 }
+
+// This tests verifies a non-contiguous JSON block is successfully handled by SDK
+static void
+test_az_iot_hub_client_properties_get_next_component_property_long_with_version_chunked_json_succeed()
+{
+  az_iot_hub_client client;
+  az_iot_hub_client_options options = az_iot_hub_client_options_default();
+  options.component_names = test_temperature_components;
+  options.component_names_length = test_temperature_components_length;
+  assert_int_equal(
+      az_iot_hub_client_init(&client, test_device_hostname, test_device_id, &options), AZ_OK);
+
+  az_span json_buffers[TEST_PROPERTY_PAYLOAD_LONG_STR_LEN];
+
+  uint8_t test_property_chunked_buffer[TEST_PROPERTY_PAYLOAD_LONG_STR_LEN * 3];
+  
+  size_t i;
+  for (i = 0; i < TEST_PROPERTY_PAYLOAD_LONG_STR_LEN; i++)
+  {
+    // Copy the well-known twin JSON into a buffer, making it non-contiguous 
+    // by puting an "0xff 0xff" between each byte of actual test data
+    test_property_chunked_buffer[i*3] = *((uint8_t*)az_span_ptr(test_property_payload_long) + i);
+    test_property_chunked_buffer[i*3 + 1] = 0xff;
+    test_property_chunked_buffer[i*3 + 2] = 0xff;
+
+    // Set the json_buffer to be the byte we want to test.
+    json_buffers[i] = az_span_create(&test_property_chunked_buffer[i*3], 1);
+  }
+
+  az_json_reader jr;
+  assert_int_equal(az_json_reader_chunked_init(&jr, json_buffers, TEST_PROPERTY_PAYLOAD_LONG_STR_LEN, NULL), AZ_OK);
+
+  test_long_with_version_impl(client, jr);
+}
+
 
 #ifdef _MSC_VER
 // warning C4113: 'void (__cdecl *)()' differs in parameter lists from 'CMUnitTestFunction'
@@ -1619,6 +1726,8 @@ int test_az_iot_hub_client_properties()
         test_az_iot_hub_client_properties_get_next_component_property_out_of_order_succeed),
     cmocka_unit_test(
         test_az_iot_hub_client_properties_get_next_component_property_long_with_version_succeed),
+    cmocka_unit_test(
+        test_az_iot_hub_client_properties_get_next_component_property_long_with_version_chunked_json_succeed),
     cmocka_unit_test(test_az_iot_hub_client_properties_builder_begin_response_status_succeed),
     cmocka_unit_test(
         test_az_iot_hub_client_properties_builder_begin_response_status_with_component_succeed),

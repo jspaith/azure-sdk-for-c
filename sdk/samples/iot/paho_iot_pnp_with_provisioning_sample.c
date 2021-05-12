@@ -630,6 +630,8 @@ static void connect_mqtt_client_to_iot_hub(void)
     exit(rc);
   }
 
+  IOT_SAMPLE_LOG("MQTT client username: %s\n", mqtt_client_username_buffer);
+
   // Set MQTT connection options.
   MQTTClient_connectOptions mqtt_connect_options = MQTTClient_connectOptions_initializer;
   mqtt_connect_options.username = mqtt_client_username_buffer;
@@ -946,11 +948,6 @@ static void process_device_property_message(
 
 static void update_device_temperature_property(double temperature, bool* out_is_max_temp_changed)
 {
-  if (device_maximum_temperature < device_minimum_temperature)
-  {
-    exit(1);
-  }
-
   *out_is_max_temp_changed = false;
   device_current_temperature = temperature;
 

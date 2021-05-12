@@ -951,12 +951,6 @@ static void send_telemetry_messages(void)
   az_span properties_span = az_span_create(properties_buffer, sizeof(properties_buffer));
   az_iot_message_properties properties;
 
-  // alternately...
-  // az_iot_message_properties_options properties_options =
-  // az_iot_message_properties_options_init(); properties_options.component_name = "foo";
-  // az_iot_message_properties_init_with_options(&properties, properties_span, written,
-  // &properties_options);
-
   az_result rc = az_iot_message_properties_init(&properties, properties_span, 0);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Unable to allocate properties");
 
