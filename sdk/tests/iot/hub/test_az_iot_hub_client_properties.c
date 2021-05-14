@@ -52,6 +52,20 @@ static const char test_correct_property_get_request_topic[] = "$iothub/twin/GET/
 static const char test_correct_property_patch_pub_topic[]
     = "$iothub/twin/PATCH/properties/reported/?$rid=id_one";
 
+
+#define TEST_PROPERTY_EMPTY_COMPONENT AZ_SPAN_LITERAL_FROM_STR("")
+
+typedef struct 
+{
+    az_span component_name;
+    az_span property_name;
+    az_json_token_kind token_kind;
+    union {
+      double number;
+      az_span span;
+    } u;
+} test_az_properties_expected;
+
 /*
 
 {
@@ -190,13 +204,76 @@ static const az_span test_property_payload_out_of_order = AZ_SPAN_LITERAL_FROM_S
 
 #define TEST_PROPERTY_PAYLOAD_LONG_STR_LEN (sizeof(TEST_PROPERTY_PAYLOAD_LONG_STR) - 1)
 
+
+static const az_span test_property_reported_with_components= AZ_SPAN_LITERAL_FROM_STR(
+    "{\"reported\":{\"manufacturer\":\"Sample-Manufacturer\","
+    "\"component_one\":{\"prop_one\":1,\"prop_two\":\"string\"},"
+    "\"model\":\"pnp-sample-Model-123\","
+    "\"component_two\":{\"prop_three\":45,\"prop_four\":\"string\"},"
+    "\"swVersion\":\"1.0.0.0\",\"osName\":\"Contoso\"}}");
+
 static const az_span test_property_payload_long = AZ_SPAN_LITERAL_FROM_STR(TEST_PROPERTY_PAYLOAD_LONG_STR);
-static az_span test_temp_component_one = AZ_SPAN_LITERAL_FROM_STR("thermostat1");
-static az_span test_temp_component_two = AZ_SPAN_LITERAL_FROM_STR("thermostat2");
 static az_span test_temperature_components[]
     = { AZ_SPAN_LITERAL_FROM_STR("thermostat1"), AZ_SPAN_LITERAL_FROM_STR("thermostat2") };
 static const int32_t test_temperature_components_length
     = sizeof(test_temperature_components) / sizeof(test_temperature_components[0]);
+
+static const test_az_properties_expected comp1_prop1_expected = 
+{
+    TEST_COMPONENT_ONE,
+    AZ_SPAN_LITERAL_FROM_STR("prop_one"),
+    AZ_JSON_TOKEN_NUMBER,
+    { .number = 1 }
+};
+
+static const test_az_properties_expected comp1_prop2_expected = 
+{
+    TEST_COMPONENT_ONE,
+    AZ_SPAN_LITERAL_FROM_STR("prop_two"),
+    AZ_JSON_TOKEN_STRING,
+    { .span = AZ_SPAN_LITERAL_FROM_STR("string") }
+};
+
+static const test_az_properties_expected comp1_prop2_user_object_expected = 
+{
+    TEST_COMPONENT_ONE,
+    AZ_SPAN_LITERAL_FROM_STR("prop_two"),
+    AZ_JSON_TOKEN_BEGIN_OBJECT,
+    { .span = AZ_SPAN_LITERAL_FROM_STR("not-tested") }
+};
+
+static const test_az_properties_expected comp2_prop3_expected = 
+{
+    TEST_COMPONENT_TWO,
+    AZ_SPAN_LITERAL_FROM_STR("prop_three"),
+    AZ_JSON_TOKEN_NUMBER,
+    { .number = 45 }
+};
+
+static const test_az_properties_expected comp2_prop4_expected = 
+{
+    TEST_COMPONENT_TWO,
+    AZ_SPAN_LITERAL_FROM_STR("prop_four"),
+    AZ_JSON_TOKEN_STRING,
+    { .span = AZ_SPAN_LITERAL_FROM_STR("string") }
+};
+
+static const test_az_properties_expected not_component_expected = 
+{
+    TEST_PROPERTY_EMPTY_COMPONENT,
+    AZ_SPAN_LITERAL_FROM_STR("not_component"),
+    AZ_JSON_TOKEN_NUMBER,
+    { .number = 42 }
+};
+
+static const test_az_properties_expected thermostat_targetTemperature_expected = 
+{
+    AZ_SPAN_LITERAL_FROM_STR("thermostat1"),
+    AZ_SPAN_LITERAL_FROM_STR("targetTemperature"),
+    AZ_JSON_TOKEN_NUMBER,
+    { .number = 47 }
+};
+
 
 #ifndef AZ_NO_PRECONDITION_CHECKING
 ENABLE_PRECONDITION_CHECK_TESTS()
@@ -982,21 +1059,7 @@ static void test_az_iot_hub_client_properties_get_properties_version_out_of_orde
   assert_int_equal(version, 4);
 }
 
-typedef struct 
-{
-    az_span component_name;
-    az_span property_name;
-    az_json_token_kind token_kind;
-    union {
-      double number;
-      az_span span;
-    } u;
-} test_az_properties_expected;
-
-#define TEST_PROPERTY_NUMBER_NOT_USED (-1)
-// TEST_PROPERTY_EMPTY_COMPONENT cannot just be AZ_EMPTY_SPAN as its put into a const struct
-#define TEST_PROPERTY_EMPTY_COMPONENT AZ_SPAN_LITERAL_FROM_STR("$$--empty--component--$$")
-#define TEST_PROPERTY_SPAN_NOT_USED AZ_SPAN_LITERAL_FROM_STR("not_used")
+// TEST_PROPERTY_EMPTY_COMPONENT cannot just be AZ_SPAN_EMPTY because it is put into a const struct
 
 // get_next_component_property verifies that the property we read next is expected,
 // advancing the underlying az_json_reader as it goes.
@@ -1052,55 +1115,6 @@ static void test_get_next_component_property(const test_az_properties_expected* 
     assert_int_equal(az_json_reader_next_token(jr), AZ_OK);
   }
 }
-
-static const test_az_properties_expected comp1_prop1_expected = 
-{
-    TEST_COMPONENT_ONE,
-    AZ_SPAN_LITERAL_FROM_STR("prop_one"),
-    AZ_JSON_TOKEN_NUMBER,
-    { .number = 1 }
-};
-
-static const test_az_properties_expected comp1_prop2_expected = 
-{
-    TEST_COMPONENT_ONE,
-    AZ_SPAN_LITERAL_FROM_STR("prop_two"),
-    AZ_JSON_TOKEN_STRING,
-    { .span = AZ_SPAN_LITERAL_FROM_STR("string") }
-};
-
-static const test_az_properties_expected comp1_prop2_user_object_expected = 
-{
-    TEST_COMPONENT_ONE,
-    AZ_SPAN_LITERAL_FROM_STR("prop_two"),
-    AZ_JSON_TOKEN_BEGIN_OBJECT,
-    { .span = AZ_SPAN_LITERAL_FROM_STR("not-tested") }
-};
-
-
-static const test_az_properties_expected comp2_prop3_expected = 
-{
-    TEST_COMPONENT_TWO,
-    AZ_SPAN_LITERAL_FROM_STR("prop_three"),
-    AZ_JSON_TOKEN_NUMBER,
-    { .number = 45 }
-};
-
-static const test_az_properties_expected comp2_prop4_expected = 
-{
-    TEST_COMPONENT_TWO,
-    AZ_SPAN_LITERAL_FROM_STR("prop_four"),
-    AZ_JSON_TOKEN_STRING,
-    { .span = AZ_SPAN_LITERAL_FROM_STR("string") }
-};
-
-static const test_az_properties_expected not_component_expected = 
-{
-    TEST_PROPERTY_EMPTY_COMPONENT,
-    AZ_SPAN_LITERAL_FROM_STR("not_component"),
-    AZ_JSON_TOKEN_NUMBER,
-    { .number = 42 }
-};
 
 static void test_az_iot_hub_client_properties_get_next_component_property_succeed()
 {
@@ -1289,15 +1303,6 @@ test_az_iot_hub_client_properties_get_next_component_property_user_not_advance_r
       AZ_ERROR_JSON_INVALID_STATE);
 }
 
-static const test_az_properties_expected thermostat_targetTemperature_expected = 
-{
-    AZ_SPAN_LITERAL_FROM_STR("thermostat1"),
-    AZ_SPAN_LITERAL_FROM_STR("targetTemperature"),
-    AZ_JSON_TOKEN_NUMBER,
-    { .number = 47 }
-};
-
-
 static void test_az_iot_hub_client_properties_get_next_component_property_two_succeed()
 {
   az_iot_hub_client client;
@@ -1315,6 +1320,111 @@ static void test_az_iot_hub_client_properties_get_next_component_property_two_su
   az_span component_name;
 
   test_get_next_component_property(&thermostat_targetTemperature_expected, response_type, AZ_IOT_HUB_CLIENT_PROPERTY_WRITEABLE, &client, &jr, &component_name);
+
+  // End of components (skipping version and reported properties section)
+  assert_int_equal(
+      az_iot_hub_client_properties_get_next_component_property(
+          &client, &jr, response_type, AZ_IOT_HUB_CLIENT_PROPERTY_WRITEABLE, &component_name),
+      AZ_ERROR_IOT_END_OF_PROPERTIES);
+}
+
+/*
+"reported": {
+    "manufacturer": "Sample-Manufacturer",
+    "model": "pnp-sample-Model-123",
+    "swVersion": "1.0.0.0",
+    "osName": "Contoso"
+}
+*/
+
+
+static const test_az_properties_expected manufacturer_expected = 
+{
+    TEST_PROPERTY_EMPTY_COMPONENT,
+    AZ_SPAN_LITERAL_FROM_STR("manufacturer"),
+    AZ_JSON_TOKEN_STRING,
+    { .span = AZ_SPAN_LITERAL_FROM_STR("Sample-Manufacturer") }
+};
+
+static const test_az_properties_expected model_expected = 
+{
+    TEST_PROPERTY_EMPTY_COMPONENT,
+    AZ_SPAN_LITERAL_FROM_STR("model"),
+    AZ_JSON_TOKEN_STRING,
+    { .span = AZ_SPAN_LITERAL_FROM_STR("pnp-sample-Model-123") }
+};
+
+static const test_az_properties_expected swVersion_expected = 
+{
+    TEST_PROPERTY_EMPTY_COMPONENT,
+    AZ_SPAN_LITERAL_FROM_STR("swVersion"),
+    AZ_JSON_TOKEN_STRING,
+    { .span = AZ_SPAN_LITERAL_FROM_STR("1.0.0.0") }
+};
+
+static const test_az_properties_expected osName_expected = 
+{
+    TEST_PROPERTY_EMPTY_COMPONENT,
+    AZ_SPAN_LITERAL_FROM_STR("osName"),
+    AZ_JSON_TOKEN_STRING,
+    { .span = AZ_SPAN_LITERAL_FROM_STR("Contoso") }
+};
+
+static void test_az_iot_hub_client_properties_get_next_component_property_two_reported_succeed()
+{
+  az_iot_hub_client client;
+  az_iot_hub_client_options options = az_iot_hub_client_options_default();
+  options.component_names = test_temperature_components;
+  options.component_names_length = test_temperature_components_length;
+  assert_int_equal(
+      az_iot_hub_client_init(&client, test_device_hostname, test_device_id, &options), AZ_OK);
+
+  az_json_reader jr;
+  assert_int_equal(az_json_reader_init(&jr, test_property_payload_two, NULL), AZ_OK);
+
+  az_iot_hub_client_properties_response_type response_type
+      = AZ_IOT_HUB_CLIENT_PROPERTIES_RESPONSE_TYPE_GET;
+  az_span component_name;
+
+  test_get_next_component_property(&manufacturer_expected, response_type, AZ_IOT_HUB_CLIENT_PROPERTY_REPORTED_FROM_DEVICE, &client, &jr, &component_name);
+  test_get_next_component_property(&model_expected, response_type, AZ_IOT_HUB_CLIENT_PROPERTY_REPORTED_FROM_DEVICE, &client, &jr, &component_name);
+  test_get_next_component_property(&swVersion_expected, response_type, AZ_IOT_HUB_CLIENT_PROPERTY_REPORTED_FROM_DEVICE, &client, &jr, &component_name);
+  test_get_next_component_property(&osName_expected, response_type, AZ_IOT_HUB_CLIENT_PROPERTY_REPORTED_FROM_DEVICE, &client, &jr, &component_name);
+
+  // End of components (skipping version and reported properties section)
+  assert_int_equal(
+      az_iot_hub_client_properties_get_next_component_property(
+          &client, &jr, response_type, AZ_IOT_HUB_CLIENT_PROPERTY_WRITEABLE, &component_name),
+      AZ_ERROR_IOT_END_OF_PROPERTIES);
+}
+
+static void test_az_iot_hub_client_properties_get_next_component_property_reported_with_components_succeed()
+{
+  az_iot_hub_client client;
+  az_iot_hub_client_options options = az_iot_hub_client_options_default();
+  options.component_names = test_temperature_components;
+  options.component_names_length = test_temperature_components_length;
+  assert_int_equal(
+      az_iot_hub_client_init(&client, test_device_hostname, test_device_id, &options), AZ_OK);
+
+  char buf[2000];
+  az_span_to_str(buf, 2000, test_property_reported_with_components);
+  printf("json=<%s>\n", buf);
+  az_json_reader jr;
+  assert_int_equal(az_json_reader_init(&jr, test_property_reported_with_components, NULL), AZ_OK);
+
+  az_iot_hub_client_properties_response_type response_type
+      = AZ_IOT_HUB_CLIENT_PROPERTIES_RESPONSE_TYPE_GET;
+  az_span component_name;
+
+  test_get_next_component_property(&manufacturer_expected, response_type, AZ_IOT_HUB_CLIENT_PROPERTY_REPORTED_FROM_DEVICE, &client, &jr, &component_name);
+  test_get_next_component_property(&comp1_prop1_expected, response_type, AZ_IOT_HUB_CLIENT_PROPERTY_REPORTED_FROM_DEVICE, &client, &jr, &component_name);
+  test_get_next_component_property(&comp1_prop2_expected, response_type, AZ_IOT_HUB_CLIENT_PROPERTY_REPORTED_FROM_DEVICE, &client, &jr, &component_name);
+  test_get_next_component_property(&model_expected, response_type, AZ_IOT_HUB_CLIENT_PROPERTY_REPORTED_FROM_DEVICE, &client, &jr, &component_name);
+  test_get_next_component_property(&comp2_prop3_expected, response_type, AZ_IOT_HUB_CLIENT_PROPERTY_REPORTED_FROM_DEVICE, &client, &jr, &component_name);
+  test_get_next_component_property(&comp2_prop4_expected, response_type, AZ_IOT_HUB_CLIENT_PROPERTY_REPORTED_FROM_DEVICE, &client, &jr, &component_name);
+  test_get_next_component_property(&swVersion_expected, response_type, AZ_IOT_HUB_CLIENT_PROPERTY_REPORTED_FROM_DEVICE, &client, &jr, &component_name);
+  test_get_next_component_property(&osName_expected, response_type, AZ_IOT_HUB_CLIENT_PROPERTY_REPORTED_FROM_DEVICE, &client, &jr, &component_name);
 
   // End of components (skipping version and reported properties section)
   assert_int_equal(
@@ -1543,6 +1653,8 @@ int test_az_iot_hub_client_properties()
         test_az_iot_hub_client_properties_get_next_component_property_user_not_advance_root_fail),
     cmocka_unit_test(test_az_iot_hub_client_properties_get_next_component_property_two_succeed),
     cmocka_unit_test(test_az_iot_hub_client_properties_get_next_component_property_long_succeed),
+    cmocka_unit_test(test_az_iot_hub_client_properties_get_next_component_property_two_reported_succeed),
+    cmocka_unit_test(test_az_iot_hub_client_properties_get_next_component_property_reported_with_components_succeed),
     cmocka_unit_test(
         test_az_iot_hub_client_properties_get_next_component_property_out_of_order_succeed),
     cmocka_unit_test(
