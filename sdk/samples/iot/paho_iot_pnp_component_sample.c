@@ -955,7 +955,7 @@ static void send_telemetry_messages(void)
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Unable to allocate properties");
 
   rc = az_iot_message_properties_append(
-        &properties, AZ_SPAN_FROM_STR(AZ_IOT_MESSAGE_COMPONENT_NAME), thermostat_1.component_name);
+      &properties, AZ_SPAN_FROM_STR(AZ_IOT_MESSAGE_COMPONENT_NAME), thermostat_1.component_name);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Unable to append properties");
 
   // Temperature Sensor 1
@@ -980,7 +980,7 @@ static void send_telemetry_messages(void)
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Unable to allocate properties");
 
   rc = az_iot_message_properties_append(
-        &properties, AZ_SPAN_FROM_STR(AZ_IOT_MESSAGE_COMPONENT_NAME), thermostat_2.component_name);
+      &properties, AZ_SPAN_FROM_STR(AZ_IOT_MESSAGE_COMPONENT_NAME), thermostat_2.component_name);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Unable to append properties");
 
   rc = az_iot_hub_client_telemetry_get_publish_topic(

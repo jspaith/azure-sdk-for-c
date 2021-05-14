@@ -5,7 +5,7 @@
  * This sample connects an Azure IoT Plug and Play enabled device with the Digital Twin Model ID
  * (DTMI). If a timeout occurs while waiting for a message from the Azure IoT Explorer, the sample
  * will continue. If MQTT_TIMEOUT_RECEIVE_MAX_MESSAGE_COUNT timeouts occur consecutively, the sample
- * will disconnect. 
+ * will disconnect.
  *
  * An X509 self-certification is used for authentication.
  *
@@ -135,7 +135,11 @@ static void process_device_property_message(
     az_span message_span,
     az_iot_hub_client_properties_response_type response_type);
 static void update_device_temperature_property(double temperature, bool* out_is_max_temp_changed);
-static void send_reported_property(az_span name, double value, int32_t version, bool build_payload_with_status);
+static void send_reported_property(
+    az_span name,
+    double value,
+    int32_t version,
+    bool build_payload_with_status);
 
 // Command functions
 static void handle_command_request(
@@ -246,7 +250,7 @@ static void connect_mqtt_client_to_iot_hub(void)
     IOT_SAMPLE_LOG_ERROR("Failed to get MQTT client username: az_result return code 0x%08x.", rc);
     exit(rc);
   }
-  
+
   IOT_SAMPLE_LOG("MQTT client username: %s\n", mqtt_client_username_buffer);
 
   // Set MQTT connection options.
@@ -266,7 +270,7 @@ static void connect_mqtt_client_to_iot_hub(void)
   }
   mqtt_connect_options.ssl = &mqtt_ssl_options;
 
-  // Connect MQTT client to the Azure IoT Hub.  This will block until the connection 
+  // Connect MQTT client to the Azure IoT Hub.  This will block until the connection
   // is established or fails.
   rc = MQTTClient_connect(mqtt_client, &mqtt_connect_options);
   if (rc != MQTTCLIENT_SUCCESS)
@@ -315,7 +319,7 @@ static void subscribe_mqtt_client_to_iot_hub_topics(void)
 }
 
 // request_all_properties sends a request to Azure IoT Hub to request all properties for
-// the device.  This call does not block.  Properties will be received on 
+// the device.  This call does not block.  Properties will be received on
 // a topic previously responded to.
 static void request_all_properties(void)
 {
@@ -337,7 +341,7 @@ static void request_all_properties(void)
   publish_mqtt_message(property_document_topic_buffer, AZ_SPAN_EMPTY, IOT_SAMPLE_MQTT_PUBLISH_QOS);
 }
 
-// receive_messages_and_send_telemetry_loop will loop to check if there are incoming MQTT 
+// receive_messages_and_send_telemetry_loop will loop to check if there are incoming MQTT
 // messages, waiting up to MQTT_TIMEOUT_RECEIVE_MS.  It will also send a telemetry message
 // every time through the loop.
 static void receive_messages_and_send_telemetry_loop(void)
@@ -395,7 +399,8 @@ static void receive_messages_and_send_telemetry_loop(void)
   }
 }
 
-// disconnect_mqtt_client_from_iot_hub disconnects and destroys the underlying MQTT connection and Paho handle.
+// disconnect_mqtt_client_from_iot_hub disconnects and destroys the underlying MQTT connection and
+// Paho handle.
 static void disconnect_mqtt_client_from_iot_hub(void)
 {
   int rc = MQTTClient_disconnect(mqtt_client, MQTT_TIMEOUT_DISCONNECT_MS);
@@ -408,7 +413,7 @@ static void disconnect_mqtt_client_from_iot_hub(void)
   MQTTClient_destroy(&mqtt_client);
 }
 
-// get_request_id sets a request Id into connection_request_id_buffer and monotonically 
+// get_request_id sets a request Id into connection_request_id_buffer and monotonically
 // increases the counter for the next query.
 static az_span get_request_id(void)
 {
@@ -447,9 +452,10 @@ static void on_message_received(char* topic, int topic_len, MQTTClient_message c
   az_iot_hub_client_command_request command_request;
 
   // Parse the incoming message topic and handle appropriately.
-  // Note that if a topic does not match - e.g. az_iot_hub_client_properties_parse_received_topic is invoked
-  // to process a command message - the function returns AZ_ERROR_IOT_TOPIC_NO_MATCH.  This is NOT a fatal
-  // error but is used to indicate to the caller to see if the topic matches other topics.
+  // Note that if a topic does not match - e.g. az_iot_hub_client_properties_parse_received_topic is
+  // invoked to process a command message - the function returns AZ_ERROR_IOT_TOPIC_NO_MATCH.  This
+  // is NOT a fatal error but is used to indicate to the caller to see if the topic matches other
+  // topics.
   rc = az_iot_hub_client_properties_parse_received_topic(
       &hub_client, topic_span, &property_response);
   if (az_result_succeeded(rc))
@@ -629,8 +635,13 @@ static void update_device_temperature_property(double temperature, bool* out_is_
   IOT_SAMPLE_LOG("Average Temperature: %2f", device_average_temperature);
 }
 
-// send_reported_property builds a property payload reporting device state and then sends it to Azure IoT Hub. 
-static void send_reported_property(az_span name, double value, int32_t version, bool build_payload_with_status)
+// send_reported_property builds a property payload reporting device state and then sends it to
+// Azure IoT Hub.
+static void send_reported_property(
+    az_span name,
+    double value,
+    int32_t version,
+    bool build_payload_with_status)
 {
   az_result rc;
 
@@ -735,7 +746,7 @@ static void send_command_response(
 }
 
 // invoke_getMaxMinReport implements the handling for device method to retrieve statitics
-// about the device's temperature.  
+// about the device's temperature.
 static bool invoke_getMaxMinReport(az_span payload, az_span response, az_span* out_response)
 {
   int32_t incoming_since_value_len = 0;
@@ -819,8 +830,8 @@ static void send_telemetry_message(void)
   IOT_SAMPLE_LOG_AZ_SPAN("Payload:", telemetry_payload);
 }
 
-// build_property_payload builds a desired JSON payload.  The JSON built just needs to conform to the
-// DTDLv2 that defined it.   
+// build_property_payload builds a desired JSON payload.  The JSON built just needs to conform to
+// the DTDLv2 that defined it.
 static void build_property_payload(
     uint8_t property_count,
     az_span const names[],
