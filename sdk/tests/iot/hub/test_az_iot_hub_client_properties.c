@@ -1402,8 +1402,8 @@ static void test_az_iot_hub_client_properties_get_next_component_property_report
 {
   az_iot_hub_client client;
   az_iot_hub_client_options options = az_iot_hub_client_options_default();
-  options.component_names = test_temperature_components;
-  options.component_names_length = test_temperature_components_length;
+  options.component_names = test_components;
+  options.component_names_length = test_components_length;
   assert_int_equal(
       az_iot_hub_client_init(&client, test_device_hostname, test_device_id, &options), AZ_OK);
 
