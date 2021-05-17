@@ -70,6 +70,7 @@ create_map_file(paho_iot_hub_methods_sample paho_iot_hub_methods_sample.map)
 # PnP Sample
 add_executable (paho_iot_pnp_sample
   ${CMAKE_CURRENT_LIST_DIR}/paho_iot_pnp_sample.c
+  ${CMAKE_CURRENT_LIST_DIR}/paho_iot_pnp_sample_common.c
 )
 
 target_link_libraries(paho_iot_pnp_sample
@@ -80,6 +81,7 @@ target_link_libraries(paho_iot_pnp_sample
 # PnP Sample
 add_executable (paho_iot_pnp_with_provisioning_sample
   ${CMAKE_CURRENT_LIST_DIR}/paho_iot_pnp_with_provisioning_sample.c
+  ${CMAKE_CURRENT_LIST_DIR}/paho_iot_pnp_sample_common.c
 )
 
 target_link_libraries(paho_iot_pnp_with_provisioning_sample
