@@ -55,7 +55,7 @@
 #define SAMPLE_TYPE PAHO_IOT_HUB
 #define SAMPLE_NAME PAHO_IOT_PNP_SAMPLE
 
-#define MQTT_TIMEOUT_RECEIVE_MAX_MESSAGE_COUNT 3
+#define MQTT_TIMEOUT_RECEIVE_MAX_MESSAGE_COUNT 100
 #define MQTT_TIMEOUT_RECEIVE_MS (8 * 1000)
 #define MQTT_TIMEOUT_DISCONNECT_MS (10 * 1000)
 
@@ -67,7 +67,7 @@ bool is_device_operational = true;
 static char const iso_spec_time_format[] = "%Y-%m-%dT%H:%M:%SZ"; // ISO8601 Time Format
 
 // * Plug and Play Values *
-// The model id is the JSON document (also called the Digital Twins Model Identifier or DTMI) which
+// The model ID is the JSON document (also called the Digital Twins Model Identifier or DTMI) which
 // defines the capability of your device. The functionality of the device should match what is
 // described in the corresponding DTMI. Should you choose to program your own PnP capable device,
 // the functionality would need to match the DTMI and you would need to update the below 'model_id'.
@@ -320,7 +320,7 @@ static void subscribe_mqtt_client_to_iot_hub_topics(void)
 
 // request_all_properties sends a request to Azure IoT Hub to request all properties for
 // the device.  This call does not block.  Properties will be received on
-// a topic previously responded to.
+// a topic previously subscribed to.
 static void request_all_properties(void)
 {
   az_result rc;
@@ -414,7 +414,7 @@ static void disconnect_mqtt_client_from_iot_hub(void)
 }
 
 // get_request_id sets a request Id into connection_request_id_buffer and monotonically
-// increases the counter for the next query.
+// increases the counter for the next MQTT operation.
 static az_span get_request_id(void)
 {
   az_span remainder;
@@ -440,7 +440,7 @@ static void publish_mqtt_message(const char* topic, az_span payload, int qos)
   }
 }
 
-// on_message_received dispatches an MQTT message when the underlying MQTT stack provides one to us
+// on_message_received dispatches an MQTT message when the underlying MQTT stack provides one
 static void on_message_received(char* topic, int topic_len, MQTTClient_message const* message)
 {
   az_result rc;

@@ -576,94 +576,22 @@ This section provides an overview of the different samples available to run and 
 
 - *Executable:* `paho_iot_pnp_sample`
 
-  This sample connects an IoT Plug and Play enabled device (a thermostat) with the Digital Twin Model ID (DTMI) detailed [here](https://github.com/Azure/opendigitaltwins-dtdl/blob/master/DTDL/v2/samples/Thermostat.json) to IoT Hub. If a timeout occurs while waiting for a message from the Azure IoT Explorer, the sample will continue. If 3 timeouts occur consecutively, the sample will disconnect. X509 authentication is used.
+  This sample connects an Azure IoT Plug and Play enabled device simulating a thermostat.  This device is described via the Digital Twin Model ID (DTMI) detailed [here](https://github.com/Azure/opendigitaltwins-dtdl/blob/master/DTDL/v2/samples/Thermostat.json). Many of the samples above demonstrate a single Azure IoT concept, such as receiving a C2D message.  This sample demonstrates an end-to-end scenario where a device must use multiple Azure IoT concepts to implement the model.
+  
+  If a timeout occurs while waiting for a message from the Azure IoT Explorer, the sample will continue. If 100 timeouts occur consecutively, the sample will disconnect. X509 authentication is used.
 
-  To interact with this sample, **you must use the Azure IoT Explorer**.
+  The easiest way to interact with this sample from the service side is to use Azure IoT Explorer.  You should:
+   More details on using Azure IoT Explorer for interacting with modeled devices is available [here](https://github.com/Azure/azure-iot-explorer/#plug-and-play).  After you've completed the prequisites described above, to use this sample you should:
 
-  Download the DTMI [here](https://github.com/Azure/opendigitaltwins-dtdl/blob/master/DTDL/v2/samples/Thermostat.json) to a local directory. Point your Azure IoT Explorer to the local version of the DTMI by selecting the "IoT Plug and Play components" tab on the left side, go to step 2 in the tool to configure the local directory where the DTMI is located, and select the "Default component" listed in step 3 of the tool. All of the Plug and Play features should then be shown near the top of the window.
-
-  <details><summary><i>How to interact with the Plug and Play sample:</i></summary>
-  <p>
-
-    The capabilities are listed below.
-
-    <details><summary><b>Device Twin:</b></summary>
-    <p>
-
-    Two device twin properties are supported in this sample:
-    - A desired property named `targetTemperature` with a `double` value for the desired temperature.
-    - A reported property named `maxTempSinceLastReboot` with a `double` value for the highest temperature reached since device boot.
-    <br>
-
-    <b>To send a device twin desired property message:</b> Select your device's "Device Twin" tab in the Azure IoT Explorer. Add the property `targetTemperature` along with a corresponding value to the `desired` section of the device twin JSON. Select "Save" to update the document and send the twin message to the device.
-
-    ```json
-    "properties": {
-        "desired": {
-            "targetTemperature": 68.5,
-        }
-    }
-    ```
-
-    No other property names sent in a desired property message are supported. If any are sent, the log will report there is nothing to update.
-
-    Upon receiving a desired property message, the sample will update the twin property locally and send a reported property of the same name back to the service. This message will include a set of "ack" values: `ac` for the HTTP-like ack code, `av` for ack version of the property, and an optional `ad` for an ack description. You will see the following in the device twin JSON.
-
-    ```json
-    "properties": {
-        "reported": {
-            "targetTemperature": {
-              "value": 68.5,
-              "ac": 200,
-              "av": 14,
-              "ad": "success"
-            },
-            "maxTempSinceLastReboot": 74.3,
-        }
-    }
-    ```
-
-    </p>
-    </details>
-
-    <details><summary><b>Commands:</b></summary>
-    <p>
-
-    One device command is supported in this sample: `getMaxMinReport`.
-
-    <b>To invoke a command:</b> Select the "Default component" and go to the "Commands" tab. Find the command named "getMaxMinReport" and input a payload using an [ISO8601](https://en.wikipedia.org/wiki/ISO_8601) time format and select "Send command".
-
-    ```json
-    "2020-08-18T17:09:29-0700"
-    ```
-
-    The command will send back to the service a response containing the following JSON payload with updated values in each field:
-
-    ```json
-    {
-      "maxTemp": 74.3,
-      "minTemp": 65.2,
-      "avgTemp": 68.79,
-      "startTime": "2020-08-18T17:09:29-0700",
-      "endTime": "2020-08-18T17:24:32-0700"
-    }
-    ```
-
-    No other commands are supported. If any other commands are attempted to be invoked, the log will report the command is not found.
-
-    </p>
-    </details>
-
-    <details><summary><b>Telemetry:</b></summary>
-    <p>
-
-    Device sends a JSON message with the property name `temperature` and a `double` value for the current temperature.
-
-    </p>
-    </details>
-
-  </details>
-
+  * Install [Azure IoT Explorer](https://github.com/Azure/azure-iot-explorer/#plug-and-play).
+  * Download [the thermostat model](https://github.com/Azure/opendigitaltwins-dtdl/blob/master/DTDL/v2/samples/Thermostat.json) to a local directory.
+  * Build and run `paho_iot_pnp_sample`.
+  * Start Azure IoT Explorer.
+    * [Configure your hub](https://github.com/Azure/azure-iot-explorer/#configure-an-iot-hub-connection).  Once you've created your thermostat device, you should see it listed in the UX.
+    * Go to `IoT Plug and Play Settings` on the home screen, select `Local Folder` for the location of the model definitions, and point to the folder you downloaded the thermostat model.
+    * Go to the devices list and select your thermostat device.  Now select `IoT Plug and Play components` and then `Default Component` to interact with the model.
+    * Additional instructions are available [here](https://github.com/Azure/azure-iot-explorer/#plug-and-play).
+  
 ### IoT Plug and Play with Provisioning Sample
 
 - *Executable:* `paho_iot_pnp_with_provisioning_sample`
