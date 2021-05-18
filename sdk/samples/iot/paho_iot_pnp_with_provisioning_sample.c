@@ -4,13 +4,16 @@
 /*
  * This sample connects an Azure IoT Plug and Play enabled device.
  *
- * Azure IoT Plug and Play requires the device to advertise its capabilities in a device model.  This
- * sample's model is available in https://github.com/Azure/opendigitaltwins-dtdl/blob/master/DTDL/v2/samples/Thermostat.json.
- * See the sample README for more information on this model.
- * For more information about IoT Plug and Play, see https://aka.ms/iotpnp.
+ * Azure IoT Plug and Play requires the device to advertise its capabilities in a device model. This
+ * sample's model is available in
+ * https://github.com/Azure/opendigitaltwins-dtdl/blob/master/DTDL/v2/samples/Thermostat.json. See
+ * the sample README for more information on this model. For more information about IoT Plug and
+ * Play, see https://aka.ms/iotpnp.
  *
- * The sample loops listening for incoming commands and property updates and periodically (every MQTT_TIMEOUT_RECEIVE_MS milliseconds)
- * will send a telemetry event.  After MQTT_TIMEOUT_RECEIVE_MAX_MESSAGE_COUNT loops without any service initiated operations, the sample will exit.
+ * The sample loops listening for incoming commands and property updates and periodically (every
+ * MQTT_TIMEOUT_RECEIVE_MS milliseconds) will send a telemetry event.  After
+ * MQTT_TIMEOUT_RECEIVE_MAX_MESSAGE_COUNT loops without any service initiated operations, the sample
+ * will exit.
  *
  * The Device Provisioning Service is used for authentication.
  *
@@ -512,4 +515,3 @@ static void disconnect_mqtt_client_from_iot_hub(void)
 
   MQTTClient_destroy(&mqtt_client);
 }
-

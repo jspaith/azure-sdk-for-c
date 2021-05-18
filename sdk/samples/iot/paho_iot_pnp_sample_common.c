@@ -2,21 +2,21 @@
 // SPDX-License-Identifier: MIT
 
 /*
- * Common implementation for *a device* that implements the Model Id 
+ * Common implementation for *a device* that implements the Model Id
  * "dtmi:com:example:Thermostat;1".  The model JSON is available in
  * https://github.com/Azure/opendigitaltwins-dtdl/blob/master/DTDL/v2/samples/Thermostat.json.
- * 
- * This code assumes that an MQTT connection to Azure IoT hub and that the underlying az_iot_hub_client
- * have already been initialized in the variables mqtt_client and hub_client.  The sample callers
- * paho_iot_pnp_sample.c and paho_iot_pnp_sample_with_provisioning.c do this before invoking
- * paho_iot_pnp_sample_device_implement().
- * 
+ *
+ * This code assumes that an MQTT connection to Azure IoT hub and that the underlying
+ * az_iot_hub_client have already been initialized in the variables mqtt_client and hub_client.  The
+ * sample callers paho_iot_pnp_sample.c and paho_iot_pnp_sample_with_provisioning.c do this before
+ * invoking paho_iot_pnp_sample_device_implement().
+ *
  * This should not be confused with ./pnp/pnp_thermostat_component.c.  Both C files implement
  * The Thermostat Model Id.  In this file, the Thermostat is the only Model that the device
  * implements.  This makes it more straightforward.  In ./pnp/pnp_thermostat_component.c,
  * the Thermostat is a subcomponent of a more complex device and hence the logic is more complex.
  */
- 
+
 #ifdef _MSC_VER
 // warning C4204: nonstandard extension used: non-constant aggregate initializer
 #pragma warning(disable : 4204)
@@ -43,8 +43,8 @@
 #include <azure/core/az_span.h>
 #include <azure/iot/az_iot_hub_client_properties.h>
 
-#include "paho_iot_pnp_sample_common.h"
 #include "iot_sample_common.h"
+#include "paho_iot_pnp_sample_common.h"
 
 MQTTClient mqtt_client;
 az_iot_hub_client hub_client;
@@ -103,7 +103,6 @@ static az_span get_request_id(void);
 static void publish_mqtt_message(char const* topic, az_span payload, int qos);
 static void on_message_received(char* topic, int topic_len, MQTTClient_message const* message);
 
-
 // Device Property functions
 static void handle_device_property_message(
     MQTTClient_message const* message,
@@ -152,14 +151,15 @@ static void build_property_payload_with_status(
 // It assumes that the underlying MQTT connection to Azure IoT Hub has already been established.
 void paho_iot_pnp_sample_device_implement(void)
 {
-    subscribe_mqtt_client_to_iot_hub_topics();
-    IOT_SAMPLE_LOG_SUCCESS("Client subscribed to IoT Hub topics.");
-    
-    request_all_properties();
-    IOT_SAMPLE_LOG_SUCCESS("Request sent for device's properties.  Response will be received asynchronously.");
-    
-    receive_messages_and_send_telemetry_loop();
-    IOT_SAMPLE_LOG_SUCCESS("Exited receive and send loop.");
+  subscribe_mqtt_client_to_iot_hub_topics();
+  IOT_SAMPLE_LOG_SUCCESS("Client subscribed to IoT Hub topics.");
+
+  request_all_properties();
+  IOT_SAMPLE_LOG_SUCCESS(
+      "Request sent for device's properties.  Response will be received asynchronously.");
+
+  receive_messages_and_send_telemetry_loop();
+  IOT_SAMPLE_LOG_SUCCESS("Exited receive and send loop.");
 }
 
 // subscribe_mqtt_client_to_iot_hub_topics subscribes to well-known MQTT topics that Azure IoT Hub
@@ -198,7 +198,6 @@ static void subscribe_mqtt_client_to_iot_hub_topics(void)
     exit(rc);
   }
 }
-
 
 // request_all_properties sends a request to Azure IoT Hub to request all properties for
 // the device.  This call does not block.  Properties will be received on
@@ -568,8 +567,8 @@ static void handle_command_request(
 {
   az_span const message_span = az_span_create((uint8_t*)message->payload, message->payloadlen);
 
-  if ((az_span_is_content_equal(command_request->component_name, AZ_SPAN_EMPTY)) && 
-      (az_span_is_content_equal(command_getMaxMinReport_name, command_request->command_name)))
+  if ((az_span_is_content_equal(command_request->component_name, AZ_SPAN_EMPTY))
+      && (az_span_is_content_equal(command_getMaxMinReport_name, command_request->command_name)))
   {
     az_iot_status status;
     az_span command_response_payload = AZ_SPAN_FROM_BUFFER(command_response_payload_buffer);
@@ -632,8 +631,7 @@ static bool invoke_getMaxMinReport(az_span payload, az_span response, az_span* o
   az_json_reader jr;
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_reader_init(&jr, payload, NULL), log_message);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_reader_next_token(&jr), log_message);
-  if (az_result_failed(
-      az_json_token_get_string(
+  if (az_result_failed(az_json_token_get_string(
           &jr.token,
           command_start_time_value_buffer,
           sizeof(command_start_time_value_buffer),
@@ -787,4 +785,3 @@ static void build_property_payload_with_status(
 
   *out_property_payload = az_json_writer_get_bytes_used_in_destination(&jw);
 }
-
