@@ -2,12 +2,17 @@
 // SPDX-License-Identifier: MIT
 
 /*
- * This sample connects an Azure IoT Plug and Play enabled device with the Digital Twin Model ID
- * (DTMI). If a timeout occurs while waiting for a message from the Azure IoT Explorer, the sample
- * will continue. If MQTT_TIMEOUT_RECEIVE_MAX_MESSAGE_COUNT timeouts occur consecutively, the sample
- * will disconnect.
+ * This sample connects an Azure IoT Plug and Play enabled device.
  *
- * An X509 self-certification is used for authentication.
+ * Azure IoT Plug and Play requires the device to advertise its capabilities in a device model.  This
+ * sample's model is available in https://github.com/Azure/opendigitaltwins-dtdl/blob/master/DTDL/v2/samples/Thermostat.json.
+ * See the sample README for more information on this model.
+ * For more information about IoT Plug and Play, see https://aka.ms/iotpnp.
+ *
+ * The sample loops listening for incoming commands and property updates and periodically (every MQTT_TIMEOUT_RECEIVE_MS milliseconds)
+ * will send a telemetry event.  After MQTT_TIMEOUT_RECEIVE_MAX_MESSAGE_COUNT loops without any service initiated operations, the sample will exit.
+ *
+ * An X509 self-signed certificate is used for authentication, directly to IoT Hub.
  *
  */
 
@@ -21,28 +26,18 @@
 #pragma warning(pop)
 #endif
 
-#include <azure/az_core.h>
-#include <azure/az_iot.h>
+#include <azure/core/az_result.h>
+#include <azure/core/az_span.h>
+#include <azure/iot/az_iot_hub_client.h>
 
 #include "iot_sample_common.h"
 #include "paho_iot_pnp_sample_common.h"
 
-#include <azure/core/az_json.h>
-#include <azure/core/az_result.h>
-#include <azure/core/az_span.h>
-#include <azure/iot/az_iot_hub_client_properties.h>
-
 #define SAMPLE_TYPE PAHO_IOT_HUB
 #define SAMPLE_NAME PAHO_IOT_PNP_SAMPLE
 
-// * Plug and Play Values *
-// The model ID is the JSON document (also called the Digital Twins Model Identifier or DTMI) which
-// defines the capability of your device. The functionality of the device should match what is
-// described in the corresponding DTMI. Should you choose to program your own PnP capable device,
-// the functionality would need to match the DTMI and you would need to update the below 'model_id'.
-// Please see the sample README for more information on this DTMI.
+// The model this device implements
 static az_span const model_id = AZ_SPAN_LITERAL_FROM_STR("dtmi:com:example:Thermostat;1");
-
 static iot_sample_environment_variables env_vars;
 static char mqtt_client_username_buffer[256];
 
@@ -55,15 +50,20 @@ static void disconnect_mqtt_client_from_iot_hub(void);
 
 int main(void)
 {
+  // The initial functions setup the MQTT connection to Azure IoT Hub, based 
+  // on environment variable settings.
   create_and_configure_mqtt_client();
   IOT_SAMPLE_LOG_SUCCESS("Client created and configured.");
 
   connect_mqtt_client_to_iot_hub();
   IOT_SAMPLE_LOG_SUCCESS("Client connected to IoT Hub.");
 
+  // The device's main loop including primary Plug and Play interaction is
+  // in paho_iot_pnp_sample_device_implement.
   paho_iot_pnp_sample_device_implement();
   IOT_SAMPLE_LOG_SUCCESS("Completed sample device implementation run.");
 
+  // Disconnect the MQTT connection.
   disconnect_mqtt_client_from_iot_hub();
   IOT_SAMPLE_LOG_SUCCESS("Client disconnected from IoT Hub.");
 
@@ -85,6 +85,7 @@ static void create_and_configure_mqtt_client(void)
   iot_sample_create_mqtt_endpoint(
       SAMPLE_TYPE, env_vars.hub_hostname, mqtt_endpoint_buffer, sizeof(mqtt_endpoint_buffer));
 
+  // The Plug and Play model ID is specified as an option during initial client initialization.
   az_iot_hub_client_options options = az_iot_hub_client_options_default();
   options.model_id = model_id;
 

@@ -12,7 +12,7 @@
 extern MQTTClient mqtt_client;
 extern az_iot_hub_client hub_client;
 
-void paho_iot_pnp_sample_device_implement();
+void paho_iot_pnp_sample_device_implement(void);
 
 #endif // PAHO_IOT_PNP_SAMPLE_COMMON
 

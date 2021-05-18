@@ -1,9 +1,22 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // SPDX-License-Identifier: MIT
 
+/*
+ * This sample connects an Azure IoT Plug and Play enabled device.
+ *
+ * Azure IoT Plug and Play requires the device to advertise its capabilities in a device model.  This
+ * sample's model is available in https://github.com/Azure/opendigitaltwins-dtdl/blob/master/DTDL/v2/samples/Thermostat.json.
+ * See the sample README for more information on this model.
+ * For more information about IoT Plug and Play, see https://aka.ms/iotpnp.
+ *
+ * The sample loops listening for incoming commands and property updates and periodically (every MQTT_TIMEOUT_RECEIVE_MS milliseconds)
+ * will send a telemetry event.  After MQTT_TIMEOUT_RECEIVE_MAX_MESSAGE_COUNT loops without any service initiated operations, the sample will exit.
+ *
+ * The Device Provisioning Service is used for authentication.
+ *
+ */
+
 #ifdef _MSC_VER
-// warning C4204: nonstandard extension used: non-constant aggregate initializer
-#pragma warning(disable : 4204)
 #pragma warning(push)
 // warning C4201: nonstandard extension used: nameless struct/union
 #pragma warning(disable : 4201)
@@ -13,18 +26,9 @@
 #pragma warning(pop)
 #endif
 
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-
-#include <azure/core/az_json.h>
 #include <azure/core/az_result.h>
 #include <azure/core/az_span.h>
 #include <azure/iot/az_iot_hub_client.h>
-#include <azure/iot/az_iot_hub_client_properties.h>
 #include <azure/iot/az_iot_provisioning_client.h>
 
 #include "iot_sample_common.h"
@@ -33,14 +37,8 @@
 #define SAMPLE_TYPE PAHO_IOT_PROVISIONING
 #define SAMPLE_NAME PAHO_IOT_PNP_WITH_PROVISIONING_SAMPLE
 
-// * Plug and Play Values *
-// The model id is the JSON document (also called the Digital Twins Model Identifier or DTMI) which
-// defines the capability of your device. The functionality of the device should match what is
-// described in the corresponding DTMI. Should you choose to program your own PnP capable device,
-// the functionality would need to match the DTMI and you would need to update the below 'model_id'.
-// Please see the sample README for more information on this DTMI.
+// The model this device implements
 static az_span const model_id = AZ_SPAN_LITERAL_FROM_STR("dtmi:com:example:Thermostat;1");
-
 
 static iot_sample_environment_variables env_vars;
 static az_iot_provisioning_client provisioning_client;
@@ -77,76 +75,10 @@ static void create_and_configure_mqtt_client_for_iot_hub(void);
 static void connect_mqtt_client_to_iot_hub(void);
 static void disconnect_mqtt_client_from_iot_hub(void);
 
-
-/*
- * This sample connects an Azure IoT Plug and Play enabled device with the Digital Twin Model ID
- * (DTMI). If a timeout occurs while waiting for a message from the Azure IoT Explorer, the sample
- * will continue. If MQTT_TIMEOUT_RECEIVE_MAX_MESSAGE_COUNT timeouts occur consecutively, the sample
- * will disconnect. X509 self-certification is used.
- *
- * To interact with this sample, you must use the Azure IoT Explorer. The capabilities are Device
- * Properties, Command, and Telemetry:
- *
- * Device Properties: Two device properties are supported in this sample.
- *   - A desired property named `targetTemperature` with a `double` value for the desired
- * temperature.
- *   - A reported property named `maxTempSinceLastReboot` with a `double` value for the highest
- * temperature reached since device boot.
- *
- * To send a device desired property message, select your device's Device Twin tab in the Azure
- * IoT Explorer. Add the property targetTemperature along with a corresponding value to the desired
- * section of the JSON. Select Save to update the twin document and send the twin message to the
- * device.
- *   {
- *     "properties": {
- *       "desired": {
- *         "targetTemperature": 68.5,
- *       }
- *     }
- *   }
- *
- * Upon receiving a desired property message, the sample will update the property locally and
- * send a reported property of the same name back to the service. This message will include a set of
- * "ack" values: `ac` for the HTTP-like ack code, `av` for ack version of the property, and an
- * optional `ad` for an ack description.
- *   {
- *     "properties": {
- *       "reported": {
- *         "targetTemperature": {
- *           "value": 68.5,
- *           "ac": 200,
- *           "av": 14,
- *           "ad": "success"
- *         },
- *         "maxTempSinceLastReboot": 74.3,
- *       }
- *     }
- *   }
- *
- * Command: One device command is supported in this sample: `getMaxMinReport`. If
- * any other commands are attempted to be invoked, the log will report the command is not found. To
- * invoke a command, select your device's Direct Method tab in the Azure IoT Explorer. Enter the
- * command name `getMaxMinReport` along with a payload using an ISO8061 time format and select
- * Invoke method.
- *
- *   "2020-08-18T17:09:29-0700"
- *
- * The command will send back to the service a response containing the following JSON payload with
- * updated values in each field:
- *   {
- *     "maxTemp": 74.3,
- *     "minTemp": 65.2,
- *     "avgTemp": 68.79,
- *     "startTime": "2020-08-18T17:09:29-0700",
- *     "endTime": "2020-08-18T17:24:32-0700"
- *   }
- *
- * Telemetry: Device sends a JSON message with the field name `temperature` and the `double` value
- * of the current temperature.
- */
 int main(void)
 {
-
+  // The initial functions connect to the Device Provisioning Service (DPS) to
+  // retrieve the device's provisioning information (IoT Hub and device name).
   create_and_configure_mqtt_client_for_provisioning();
   IOT_SAMPLE_LOG_SUCCESS("Client created and configured.");
 
@@ -165,15 +97,20 @@ int main(void)
   disconnect_mqtt_client_from_provisioning_service();
   IOT_SAMPLE_LOG_SUCCESS("Client disconnected from provisioning service.");
 
+  // Now that we have been provisioned by DPS, create an MQTT connection to
+  // Azure IoT Hub.
   create_and_configure_mqtt_client_for_iot_hub();
   IOT_SAMPLE_LOG_SUCCESS("Client created and configured.");
 
   connect_mqtt_client_to_iot_hub();
   IOT_SAMPLE_LOG_SUCCESS("Client connected to IoT Hub.");
 
+  // The device's main loop including primary Plug and Play interaction is
+  // in paho_iot_pnp_sample_device_implement.
   paho_iot_pnp_sample_device_implement();
   IOT_SAMPLE_LOG_SUCCESS("Completed sample device implementation run.");
 
+  // Disconnect the MQTT connection.
   disconnect_mqtt_client_from_iot_hub();
   IOT_SAMPLE_LOG_SUCCESS("Client disconnected from IoT Hub.");
 
@@ -492,6 +429,7 @@ static void create_and_configure_mqtt_client_for_iot_hub(void)
   iot_sample_create_mqtt_endpoint(
       PAHO_IOT_HUB, device_iot_hub_endpoint, mqtt_endpoint_buffer, sizeof(mqtt_endpoint_buffer));
 
+  // The Plug and Play model ID is specified as an option during initial client initialization.
   az_iot_hub_client_options options = az_iot_hub_client_options_default();
   options.model_id = model_id;
 

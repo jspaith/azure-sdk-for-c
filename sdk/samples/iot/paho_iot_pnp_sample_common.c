@@ -1,6 +1,22 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // SPDX-License-Identifier: MIT
 
+/*
+ * Common implementation for *a device* that implements the Model Id 
+ * "dtmi:com:example:Thermostat;1".  The model JSON is available in
+ * https://github.com/Azure/opendigitaltwins-dtdl/blob/master/DTDL/v2/samples/Thermostat.json.
+ * 
+ * This code assumes that an MQTT connection to Azure IoT hub and that the underlying az_iot_hub_client
+ * have already been initialized in the variables mqtt_client and hub_client.  The sample callers
+ * paho_iot_pnp_sample.c and paho_iot_pnp_sample_with_provisioning.c do this before invoking
+ * paho_iot_pnp_sample_device_implement().
+ * 
+ * This should not be confused with ./pnp/pnp_thermostat_component.c.  Both C files implement
+ * The Thermostat Model Id.  In this file, the Thermostat is the only Model that the device
+ * implements.  This makes it more straightforward.  In ./pnp/pnp_thermostat_component.c,
+ * the Thermostat is a subcomponent of a more complex device and hence the logic is more complex.
+ */
+ 
 #ifdef _MSC_VER
 // warning C4204: nonstandard extension used: non-constant aggregate initializer
 #pragma warning(disable : 4204)
@@ -37,11 +53,13 @@ az_iot_hub_client hub_client;
 #define DEFAULT_START_TEMP_CELSIUS 22.0
 #define DOUBLE_DECIMAL_PLACE_DIGITS 2
 
+#define SAMPLE_MQTT_TOPIC_LENGTH 128
+
 bool is_device_operational = true;
 static char const iso_spec_time_format[] = "%Y-%m-%dT%H:%M:%SZ"; // ISO8601 Time Format
 
 // MQTT Connection Values
-static uint32_t connection_request_id_int = 0;
+static uint16_t connection_request_id = 0;
 static char connection_request_id_buffer[16];
 
 // Property Values
@@ -131,15 +149,17 @@ static void build_property_payload_with_status(
     az_span* out_property_payload);
 
 // thermostat_device_implement is invoked by the caller to simulate the thermostat device.
-// It assumes that the underlying MQTT connection to Azure IoT Hub has already been established,
-// either via a 
-void paho_iot_pnp_sample_device_implement()
+// It assumes that the underlying MQTT connection to Azure IoT Hub has already been established.
+void paho_iot_pnp_sample_device_implement(void)
 {
     subscribe_mqtt_client_to_iot_hub_topics();
     IOT_SAMPLE_LOG_SUCCESS("Client subscribed to IoT Hub topics.");
     
     request_all_properties();
+    IOT_SAMPLE_LOG_SUCCESS("Request sent for device's properties.  Response will be received asynchronously.");
+    
     receive_messages_and_send_telemetry_loop();
+    IOT_SAMPLE_LOG_SUCCESS("Exited receive and send loop.");
 }
 
 // subscribe_mqtt_client_to_iot_hub_topics subscribes to well-known MQTT topics that Azure IoT Hub
@@ -148,7 +168,7 @@ static void subscribe_mqtt_client_to_iot_hub_topics(void)
 {
   int rc;
 
-  // Messages received on the command topic will be commands to be invoked.
+  // Subscribe to incoming commands.
   rc = MQTTClient_subscribe(mqtt_client, AZ_IOT_HUB_CLIENT_COMMANDS_SUBSCRIBE_TOPIC, 1);
   if (rc != MQTTCLIENT_SUCCESS)
   {
@@ -157,7 +177,8 @@ static void subscribe_mqtt_client_to_iot_hub_topics(void)
     exit(rc);
   }
 
-  // Messages received on the property PATCH topic will be updates to the desired properties.
+  // Subscribe to property PATCH notifications.  Messages will be sent to this topic when
+  // writeable properties are updated by the service.
   rc = MQTTClient_subscribe(mqtt_client, AZ_IOT_HUB_CLIENT_PROPERTIES_PATCH_SUBSCRIBE_TOPIC, 1);
   if (rc != MQTTCLIENT_SUCCESS)
   {
@@ -166,7 +187,9 @@ static void subscribe_mqtt_client_to_iot_hub_topics(void)
     exit(rc);
   }
 
-  // Messages received on property response topic will be response statuses from the server.
+  // Subscribe to the properties response topic.  When the device invokes a PUBLISH to get
+  // all properties (both reported from device and reported - see request_all_properties() below)
+  // the property payload will be sent to this topic.
   rc = MQTTClient_subscribe(mqtt_client, AZ_IOT_HUB_CLIENT_PROPERTIES_RESPONSE_SUBSCRIBE_TOPIC, 1);
   if (rc != MQTTCLIENT_SUCCESS)
   {
@@ -179,15 +202,15 @@ static void subscribe_mqtt_client_to_iot_hub_topics(void)
 
 // request_all_properties sends a request to Azure IoT Hub to request all properties for
 // the device.  This call does not block.  Properties will be received on
-// a topic previously subscribed to.
+// a topic previously subscribed to (AZ_IOT_HUB_CLIENT_PROPERTIES_RESPONSE_SUBSCRIBE_TOPIC.)
 static void request_all_properties(void)
 {
   az_result rc;
 
   IOT_SAMPLE_LOG("Client requesting device property document from service.");
 
-  // Get the property document topic to publish the property document request.
-  char property_document_topic_buffer[128];
+  // Get the topic to publish the property document request.
+  char property_document_topic_buffer[SAMPLE_MQTT_TOPIC_LENGTH];
   rc = az_iot_hub_client_properties_document_get_publish_topic(
       &hub_client,
       get_request_id(),
@@ -199,7 +222,6 @@ static void request_all_properties(void)
   // Publish the property document request.
   publish_mqtt_message(property_document_topic_buffer, AZ_SPAN_EMPTY, IOT_SAMPLE_MQTT_PUBLISH_QOS);
 }
-
 
 // receive_messages_and_send_telemetry_loop will loop to check if there are incoming MQTT
 // messages, waiting up to MQTT_TIMEOUT_RECEIVE_MS.  It will also send a telemetry message
@@ -267,8 +289,14 @@ static az_span get_request_id(void)
   az_span out_span = az_span_create(
       (uint8_t*)connection_request_id_buffer, sizeof(connection_request_id_buffer));
 
-  // TODO: What happens when this loops?  Shouldn't this be 16 bit in any case?
-  az_result rc = az_span_u32toa(out_span, connection_request_id_int++, &remainder);
+  connection_request_id++;
+  if (connection_request_id == UINT16_MAX)
+  {
+    // Connection id has looped.  Reset.
+    connection_request_id = 1;
+  }
+
+  az_result rc = az_span_u32toa(out_span, connection_request_id, &remainder);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Failed to get request id");
 
   return az_span_slice(out_span, 0, az_span_size(out_span) - az_span_size(remainder));
@@ -492,7 +520,7 @@ static void send_reported_property(
   az_result rc;
 
   // Get the property PATCH topic to send a reported property update.
-  char property_patch_topic_buffer[128];
+  char property_patch_topic_buffer[SAMPLE_MQTT_TOPIC_LENGTH];
   rc = az_iot_hub_client_properties_patch_get_publish_topic(
       &hub_client,
       get_request_id(),
@@ -502,7 +530,7 @@ static void send_reported_property(
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Failed to get the property PATCH topic");
 
   // Build the updated reported property message.
-  char reported_property_payload_buffer[128];
+  char reported_property_payload_buffer[SAMPLE_MQTT_TOPIC_LENGTH];
   az_span reported_property_payload = AZ_SPAN_FROM_BUFFER(reported_property_payload_buffer);
 
   if (build_payload_with_status)
@@ -540,7 +568,8 @@ static void handle_command_request(
 {
   az_span const message_span = az_span_create((uint8_t*)message->payload, message->payloadlen);
 
-  if (az_span_is_content_equal(command_getMaxMinReport_name, command_request->command_name))
+  if ((az_span_is_content_equal(command_request->component_name, AZ_SPAN_EMPTY)) && 
+      (az_span_is_content_equal(command_getMaxMinReport_name, command_request->command_name)))
   {
     az_iot_status status;
     az_span command_response_payload = AZ_SPAN_FROM_BUFFER(command_response_payload_buffer);
@@ -574,7 +603,7 @@ static void send_command_response(
   az_result rc;
 
   // Get the command response topic to publish the command response.
-  char command_response_topic_buffer[128];
+  char command_response_topic_buffer[SAMPLE_MQTT_TOPIC_LENGTH];
   rc = az_iot_hub_client_commands_response_get_publish_topic(
       &hub_client,
       command_request->request_id,
@@ -603,13 +632,16 @@ static bool invoke_getMaxMinReport(az_span payload, az_span response, az_span* o
   az_json_reader jr;
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_reader_init(&jr, payload, NULL), log_message);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_reader_next_token(&jr), log_message);
-  IOT_SAMPLE_EXIT_IF_AZ_FAILED(
+  if (az_result_failed(
       az_json_token_get_string(
           &jr.token,
           command_start_time_value_buffer,
           sizeof(command_start_time_value_buffer),
-          &incoming_since_value_len),
-      log_message);
+          &incoming_since_value_len)))
+  {
+    *out_response = command_empty_response_payload;
+    return false;
+  }
 
   // Set the response payload to error if the `since` value was empty.
   if (incoming_since_value_len == 0)
@@ -656,7 +688,7 @@ static void send_telemetry_message(void)
   az_result rc;
 
   // Get the Telemetry topic to publish the telemetry message.
-  char telemetry_topic_buffer[128];
+  char telemetry_topic_buffer[SAMPLE_MQTT_TOPIC_LENGTH];
   rc = az_iot_hub_client_telemetry_get_publish_topic(
       &hub_client, NULL, telemetry_topic_buffer, sizeof(telemetry_topic_buffer), NULL);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Failed to get the Telemetry topic");
@@ -666,7 +698,7 @@ static void send_telemetry_message(void)
   az_span const names[1] = { telemetry_temperature_name };
   double const values[1] = { device_current_temperature };
 
-  char telemetry_payload_buffer[128];
+  char telemetry_payload_buffer[SAMPLE_MQTT_TOPIC_LENGTH];
   az_span telemetry_payload = AZ_SPAN_FROM_BUFFER(telemetry_payload_buffer);
   build_property_payload(count, names, values, NULL, telemetry_payload, &telemetry_payload);
 
@@ -728,9 +760,11 @@ static void build_property_payload_with_status(
   char const* const log_message = "Failed to build property payload with status";
 
   az_json_writer jw;
+
   // First initialize the az_json_writer object, as in all JSON writes.
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_init(&jw, property_payload, NULL), log_message);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_begin_object(&jw), log_message);
+
   // Responding to a desired property requires additional metadata embedded in the JSON payload.
   // The az_iot_hub_client_properties_builder_begin_response_status will write this metadata
   // to the az_json_writer.
@@ -738,11 +772,13 @@ static void build_property_payload_with_status(
       az_iot_hub_client_properties_builder_begin_response_status(
           &hub_client, &jw, name, ack_code_value, ack_version_value, ack_description_value),
       log_message);
+
   // At this point the application writes the value of the desired property is it is operating over.
   // In this sample it is the double indicating the desired temperature, though in general
   // it should conform to the DTDLv2 definition.
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(
       az_json_writer_append_double(&jw, value, DOUBLE_DECIMAL_PLACE_DIGITS), log_message);
+
   // After writing the value, az_iot_hub_client_properties_builder_end_response_status is used
   // to close the property in JSON.
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(
