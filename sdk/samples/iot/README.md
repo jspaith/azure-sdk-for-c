@@ -359,7 +359,7 @@ Set the following environment variables if running any of these samples: `paho_i
 
 #### IoT Provisioning X.509 Certificate Sample
 
-Set the following environment variables if running the sample: `paho_iot_provisioning_sample`
+Set the following environment variables if running the sample: `paho_iot_provisioning_sample`, `paho_iot_pnp_with_provisioning_sample.exe`
 
 <details><summary><i>Instructions to set environment variables for DPS X.509 Certificate sample:</i></summary>
 <p>
@@ -576,30 +576,28 @@ This section provides an overview of the different samples available to run and 
 
 - *Executable:* `paho_iot_pnp_sample`
 
-  This sample connects an Azure IoT Plug and Play enabled device simulating a thermostat.  This device is described via the Digital Twin Model ID (DTMI) detailed [here](https://github.com/Azure/opendigitaltwins-dtdl/blob/master/DTDL/v2/samples/Thermostat.json). Many of the samples above demonstrate a single Azure IoT concept, such as receiving a C2D message.  This sample demonstrates an end-to-end scenario where a device must use multiple Azure IoT concepts to implement the model.
-  
+  This sample connects an Azure IoT Plug and Play enabled device simulating a thermostat.  This device is described via the Digital Twin Model ID (DTMI) detailed [here](https://github.com/Azure/opendigitaltwins-dtdl/blob/master/DTDL/v2/samples/Thermostat.json). This sample demonstrates sending telemetry and properties from the device and receiving commands and writeable properties from the service.
+
   If a timeout occurs while waiting for a message from the Azure IoT Explorer, the sample will continue. If 100 timeouts occur consecutively, the sample will disconnect. X509 authentication is used.
 
-  The easiest way to interact with this sample from the service side is to use Azure IoT Explorer.  You should:
-   More details on using Azure IoT Explorer for interacting with modeled devices is available [here](https://github.com/Azure/azure-iot-explorer/#plug-and-play).  After you've completed the prequisites described above, to use this sample you should:
+  The easiest way to interact with this sample from the service side is to use Azure IoT Explorer.  To use the sample:
 
-  * Install [Azure IoT Explorer](https://github.com/Azure/azure-iot-explorer/#plug-and-play).
-  * Download [the thermostat model](https://github.com/Azure/opendigitaltwins-dtdl/blob/master/DTDL/v2/samples/Thermostat.json) to a local directory.
-  * Build and run `paho_iot_pnp_sample`.
-  * Start Azure IoT Explorer.
-    * [Configure your hub](https://github.com/Azure/azure-iot-explorer/#configure-an-iot-hub-connection).  Once you've created your thermostat device, you should see it listed in the UX.
-    * Go to `IoT Plug and Play Settings` on the home screen, select `Local Folder` for the location of the model definitions, and point to the folder you downloaded the thermostat model.
-    * Go to the devices list and select your thermostat device.  Now select `IoT Plug and Play components` and then `Default Component` to interact with the model.
-    * Additional instructions are available [here](https://github.com/Azure/azure-iot-explorer/#plug-and-play).
+  - Follow the initial setup instructions described above.  Set the device's authentication using the steps from [IoT Hub Symetric Key (SAS) Sample](#iot-hub-symetric-key-sas-sample)
+  - Install [Azure IoT Explorer](https://github.com/Azure/azure-iot-explorer/#plug-and-play).
+  - Download [the thermostat model](https://github.com/Azure/opendigitaltwins-dtdl/blob/master/DTDL/v2/samples/Thermostat.json) to a local directory.
+  - Build and run `paho_iot_pnp_sample`.
+  - Start Azure IoT Explorer and then:
+    - [Configure your hub](https://github.com/Azure/azure-iot-explorer/#configure-an-iot-hub-connection).  Once you've created your thermostat device, you should see it listed in the UX.
+    - Go to `IoT Plug and Play Settings` on the home screen, select `Local Folder` for the location of the model definitions, and point to the folder you downloaded the thermostat model.
+    - Go to the devices list and select your thermostat device.  Now select `IoT Plug and Play components` and then `Default Component` to interact with the model.
+    - Additional instructions for Azure IoT Explorer, including screenshots, are available [here](https://github.com/Azure/azure-iot-explorer/#plug-and-play).
   
 ### IoT Plug and Play with Provisioning Sample
 
 - *Executable:* `paho_iot_pnp_with_provisioning_sample`
 
-  This sample has the same functionality as the `paho_iot_pnp_sample` but uses the Azure Device Provisioning Service for authentication. The same steps above may be followed for interacting with the sample, but you must instead set the following environment variables for authentication:
-  - `AZ_IOT_PROVISIONING_ID_SCOPE`
-  - `AZ_IOT_PROVISIONING_REGISTRATION_ID`
-  - `AZ_IOT_DEVICE_X509_CERT_PEM_FILE_PATH`
+  This sample has the same functionality as the `paho_iot_pnp_sample` but uses the Azure Device Provisioning Service for authentication. The same steps above may be followed for interacting with the sample, but you must instead set the environment variables described in [IoT Provisioning X.509 Certificate Sample](#iot-provisioning-x509-certificate-sample) for authentication.
+
 
 ### IoT Plug and Play Multiple Component Sample
 
