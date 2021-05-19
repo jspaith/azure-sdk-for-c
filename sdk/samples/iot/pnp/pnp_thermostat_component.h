@@ -41,6 +41,7 @@ az_result pnp_thermostat_init(
     az_span component_name,
     double initial_temperature);
 
+#if 0
 /**
  * @brief Build the thermostat's temperature telemetry message.
  *
@@ -52,7 +53,12 @@ void pnp_thermostat_build_telemetry_message(
     pnp_thermostat_component* thermostat_component,
     az_span payload,
     az_span* out_payload);
+#endif 
 
+void pnp_thermostat_send_telemetry_message(pnp_thermostat_component* thermostat_component, az_iot_hub_client const* hub_client, MQTTClient mqtt_client);
+
+
+#if 0
 /**
  * @brief Build the thermostat's maximum temperature reported property message.
  *
@@ -68,6 +74,7 @@ void pnp_thermostat_build_maximum_temperature_reported_property(
     az_span payload,
     az_span* out_payload,
     az_span* out_property_name);
+#endif
 
 /**
  * @brief Build the thermostat's error message with status.
@@ -108,12 +115,11 @@ void pnp_thermostat_build_error_reported_property_with_status(
  * @retval True if property updated. False if property does not belong to thermostat component.
  */
 az_result pnp_thermostat_process_property_update(
-    az_iot_hub_client const* pnp_client,
-    pnp_thermostat_component* ref_thermostat_component,
+    az_iot_hub_client const* hub_client,
+    pnp_thermostat_component* thermostat_component,
     az_json_reader* property_name_and_value,
-    int32_t version,
-    az_span payload,
-    az_span* out_payload);
+    MQTTClient mqtt_client,
+    int32_t version);
 
 /**
  * @brief Update the thermostat's member variables and prepare reported property message.

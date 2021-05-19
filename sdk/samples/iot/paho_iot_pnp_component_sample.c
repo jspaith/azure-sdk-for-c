@@ -8,16 +8,6 @@
 #include <string.h>
 #include <time.h>
 
-#ifdef _MSC_VER
-#pragma warning(push)
-// warning C4201: nonstandard extension used: nameless struct/union
-#pragma warning(disable : 4201)
-#endif
-#include <paho-mqtt/MQTTClient.h>
-#ifdef _MSC_VER
-#pragma warning(pop)
-#endif
-
 #include "iot_sample_common.h"
 
 #include <stdbool.h>
@@ -98,7 +88,6 @@ static void receive_messages(void);
 static void disconnect_mqtt_client_from_iot_hub(void);
 
 // General message sending and receiving functions
-static void publish_mqtt_message(char const* topic, az_span payload, int qos);
 static void receive_mqtt_message(void);
 static void on_message_received(
     char* topic,
@@ -421,24 +410,8 @@ static void initialize_components(void)
 
 static void send_device_info(void)
 {
-  // Get the property PATCH topic to send a reported property update.
-  az_result rc = az_iot_hub_client_properties_patch_get_publish_topic(
-      &hub_client,
-      pnp_mqtt_get_request_id(),
-      publish_message.topic,
-      publish_message.topic_length,
-      NULL);
-  IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Failed to get the property PATCH topic");
-
-  // Build the device info reported property message.
-  pnp_device_info_build_reported_property(publish_message.payload, &publish_message.out_payload);
-
-  // Publish the device info reported property update.
-  publish_mqtt_message(
-      publish_message.topic, publish_message.out_payload, IOT_SAMPLE_MQTT_PUBLISH_QOS);
-  IOT_SAMPLE_LOG_SUCCESS("Client sent reported property message for device info.");
-  IOT_SAMPLE_LOG_AZ_SPAN("Payload:", publish_message.out_payload);
-  IOT_SAMPLE_LOG(" "); // Formatting
+  // Build and send the device info reported property message.
+  pnp_device_info_send_reported_properties(&hub_client, mqtt_client);
 }
 
 static void send_serial_number(void)
@@ -458,7 +431,7 @@ static void send_serial_number(void)
 
   // Publish the serial number reported property update.
   publish_mqtt_message(
-      publish_message.topic, publish_message.out_payload, IOT_SAMPLE_MQTT_PUBLISH_QOS);
+      mqtt_client, publish_message.topic, publish_message.out_payload, IOT_SAMPLE_MQTT_PUBLISH_QOS);
   IOT_SAMPLE_LOG_SUCCESS(
       "Client sent `%.*s` reported property message.",
       az_span_size(reported_property_serial_number_name),
@@ -481,84 +454,15 @@ static void request_all_properties(void)
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Failed to get the property document topic");
 
   // Publish the property document request.
-  publish_mqtt_message(publish_message.topic, AZ_SPAN_EMPTY, IOT_SAMPLE_MQTT_PUBLISH_QOS);
+  publish_mqtt_message(mqtt_client, publish_message.topic, AZ_SPAN_EMPTY, IOT_SAMPLE_MQTT_PUBLISH_QOS);
   IOT_SAMPLE_LOG(" "); // Formatting
 }
 
 static void receive_messages(void)
 {
-  az_result rc;
   // Continue to receive commands or device property messages while device is operational.
   while (is_device_operational)
   {
-    // Send max temp for each thermostat since boot, if needed.
-    if (thermostat_1.send_maximum_temperature_property)
-    {
-      // Get the property PATCH topic to send a reported property update.
-      rc = az_iot_hub_client_properties_patch_get_publish_topic(
-          &hub_client,
-          pnp_mqtt_get_request_id(),
-          publish_message.topic,
-          publish_message.topic_length,
-          NULL);
-      IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Failed to get the property PATCH topic");
-
-      // Build the maximum temperature reported property message.
-      az_span property_name;
-      pnp_thermostat_build_maximum_temperature_reported_property(
-          &hub_client,
-          &thermostat_1,
-          publish_message.payload,
-          &publish_message.out_payload,
-          &property_name);
-
-      // Publish the maximum temperature reported property update.
-      publish_mqtt_message(
-          publish_message.topic, publish_message.out_payload, IOT_SAMPLE_MQTT_PUBLISH_QOS);
-      IOT_SAMPLE_LOG_SUCCESS(
-          "Client sent Temperature Sensor 1 the `%.*s` reported property message.",
-          az_span_size(property_name),
-          az_span_ptr(property_name));
-      IOT_SAMPLE_LOG_AZ_SPAN("Payload:", publish_message.out_payload);
-      IOT_SAMPLE_LOG(" "); // Formatting
-
-      thermostat_1.send_maximum_temperature_property = false; // Only send again if new max set.
-    }
-
-    if (thermostat_2.send_maximum_temperature_property)
-    {
-      // Get the property PATCH topic to send a reported property update.
-      rc = az_iot_hub_client_properties_patch_get_publish_topic(
-          &hub_client,
-          pnp_mqtt_get_request_id(),
-          publish_message.topic,
-          publish_message.topic_length,
-          NULL);
-      IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Failed to get the property PATCH topic");
-
-      // Build the maximum temperature reported property message.
-      az_span property_name;
-      pnp_thermostat_build_maximum_temperature_reported_property(
-          &hub_client,
-          &thermostat_2,
-          publish_message.payload,
-          &publish_message.out_payload,
-          &property_name);
-
-      // Publish the maximum temperature reported property update.
-      publish_mqtt_message(
-          publish_message.topic, publish_message.out_payload, IOT_SAMPLE_MQTT_PUBLISH_QOS);
-
-      IOT_SAMPLE_LOG_SUCCESS(
-          "Client sent Temperature Sensor 2 the `%.*s` reported property message.",
-          az_span_size(property_name),
-          az_span_ptr(property_name));
-      IOT_SAMPLE_LOG_AZ_SPAN("Payload:", publish_message.out_payload);
-      IOT_SAMPLE_LOG(" "); // Formatting
-
-      thermostat_2.send_maximum_temperature_property = false; // Only send again if new max set.
-    }
-
     // Send telemetry messages. No response requested from server.
     send_telemetry_messages();
     IOT_SAMPLE_LOG(" "); // Formatting.
@@ -578,18 +482,6 @@ static void disconnect_mqtt_client_from_iot_hub(void)
   }
 
   MQTTClient_destroy(&mqtt_client);
-}
-
-static void publish_mqtt_message(char const* topic, az_span payload, int qos)
-{
-  int rc = MQTTClient_publish(
-      mqtt_client, topic, az_span_size(payload), az_span_ptr(payload), qos, 0, NULL);
-
-  if (rc != MQTTCLIENT_SUCCESS)
-  {
-    IOT_SAMPLE_LOG_ERROR("Failed to publish message: MQTTClient return code %d", rc);
-    exit(rc);
-  }
 }
 
 static void receive_mqtt_message(void)
@@ -724,17 +616,8 @@ static void process_property_message(
             &hub_client,
             &thermostat_1,
             &jr,
-            version,
-            publish_message.payload,
-            &publish_message.out_payload);
-        if (az_result_succeeded(rc))
-        {
-          // Send response to the updated property.
-          publish_mqtt_message(
-              publish_message.topic, publish_message.out_payload, IOT_SAMPLE_MQTT_PUBLISH_QOS);
-          IOT_SAMPLE_LOG_SUCCESS("Client sent Temperature Sensor 1 reported property message:");
-          IOT_SAMPLE_LOG_AZ_SPAN("Payload:", publish_message.out_payload);
-        }
+            mqtt_client,
+            version);
       }
       else if (az_span_is_content_equal(component_name, thermostat_2_name))
       {
@@ -742,17 +625,8 @@ static void process_property_message(
             &hub_client,
             &thermostat_2,
             &jr,
-            version,
-            publish_message.payload,
-            &publish_message.out_payload);
-        if (az_result_succeeded(rc))
-        {
-          // Send response to the updated property.
-          publish_mqtt_message(
-              publish_message.topic, publish_message.out_payload, IOT_SAMPLE_MQTT_PUBLISH_QOS);
-          IOT_SAMPLE_LOG_SUCCESS("Client sent Temperature Sensor 2 reported property message:");
-          IOT_SAMPLE_LOG_AZ_SPAN("Payload:", publish_message.out_payload);
-        }
+            mqtt_client,
+            version);
       }
       else
       {
@@ -822,7 +696,7 @@ static void process_property_message(
 
         // Send error response to the updated property.
         publish_mqtt_message(
-            publish_message.topic, publish_message.out_payload, IOT_SAMPLE_MQTT_PUBLISH_QOS);
+            mqtt_client, publish_message.topic, publish_message.out_payload, IOT_SAMPLE_MQTT_PUBLISH_QOS);
         IOT_SAMPLE_LOG_SUCCESS(
             "Client sent Temperature Controller error status reported property message:");
         IOT_SAMPLE_LOG_AZ_SPAN("Payload:", publish_message.out_payload);
@@ -939,7 +813,7 @@ static void handle_command_request(
 
   // Publish the command response.
   publish_mqtt_message(
-      publish_message.topic, publish_message.out_payload, IOT_SAMPLE_MQTT_PUBLISH_QOS);
+      mqtt_client, publish_message.topic, publish_message.out_payload, IOT_SAMPLE_MQTT_PUBLISH_QOS);
   IOT_SAMPLE_LOG_SUCCESS("Client published command response.");
   IOT_SAMPLE_LOG("Status: %d", status);
   IOT_SAMPLE_LOG_AZ_SPAN("Payload:", publish_message.out_payload);
@@ -947,56 +821,10 @@ static void handle_command_request(
 
 static void send_telemetry_messages(void)
 {
-  unsigned char properties_buffer[64]; // TODO: magic # in code, fix.
-  az_span properties_span = az_span_create(properties_buffer, sizeof(properties_buffer));
-  az_iot_message_properties properties;
+  pnp_thermostat_send_telemetry_message(&thermostat_1, &hub_client, mqtt_client);
+  pnp_thermostat_send_telemetry_message(&thermostat_2, &hub_client, mqtt_client);
 
-  az_result rc = az_iot_message_properties_init(&properties, properties_span, 0);
-  IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Unable to allocate properties");
-
-  rc = az_iot_message_properties_append(
-      &properties, AZ_SPAN_FROM_STR(AZ_IOT_MESSAGE_COMPONENT_NAME), thermostat_1.component_name);
-  IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Unable to append properties");
-
-  // Temperature Sensor 1
-  // Get the telemetry topic to publish the telemetry message.
-  rc = az_iot_hub_client_telemetry_get_publish_topic(
-      &hub_client, &properties, publish_message.topic, publish_message.topic_length, NULL);
-  IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Unable to get the telemetry topic");
-
-  // Build the telemetry message.
-  pnp_thermostat_build_telemetry_message(
-      &thermostat_1, publish_message.payload, &publish_message.out_payload);
-
-  // Publish the telemetry message.
-  publish_mqtt_message(
-      publish_message.topic, publish_message.out_payload, IOT_SAMPLE_MQTT_PUBLISH_QOS);
-  IOT_SAMPLE_LOG_SUCCESS("Client published the telemetry message for Temperature Sensor 1.");
-  IOT_SAMPLE_LOG_AZ_SPAN("Payload:", publish_message.out_payload);
-
-  // Temperature Sensor 2
-  // Get the telemetry topic to publish the telemetry message.
-  rc = az_iot_message_properties_init(&properties, properties_span, 0);
-  IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Unable to allocate properties");
-
-  rc = az_iot_message_properties_append(
-      &properties, AZ_SPAN_FROM_STR(AZ_IOT_MESSAGE_COMPONENT_NAME), thermostat_2.component_name);
-  IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Unable to append properties");
-
-  rc = az_iot_hub_client_telemetry_get_publish_topic(
-      &hub_client, NULL, publish_message.topic, publish_message.topic_length, NULL);
-  IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Unable to get the telemetry topic");
-
-  // Build the telemetry message.
-  pnp_thermostat_build_telemetry_message(
-      &thermostat_2, publish_message.payload, &publish_message.out_payload);
-
-  // Publish the telemetry message.
-  publish_mqtt_message(
-      publish_message.topic, publish_message.out_payload, IOT_SAMPLE_MQTT_PUBLISH_QOS);
-  IOT_SAMPLE_LOG_SUCCESS("Client published the telemetry message for Temperature Sensor 2.");
-  IOT_SAMPLE_LOG_AZ_SPAN("Payload:", publish_message.out_payload);
-
+#if 0
   // Temperature Controller
   // Get the telemetry topic to publish the telemetry message.
   rc = az_iot_hub_client_telemetry_get_publish_topic(
@@ -1008,9 +836,10 @@ static void send_telemetry_messages(void)
 
   // Publish the telemetry message.
   publish_mqtt_message(
-      publish_message.topic, publish_message.out_payload, IOT_SAMPLE_MQTT_PUBLISH_QOS);
+      mqtt_client, publish_message.topic, publish_message.out_payload, IOT_SAMPLE_MQTT_PUBLISH_QOS);
   IOT_SAMPLE_LOG_SUCCESS("Client published the telemetry message for the Temperature Controller.");
   IOT_SAMPLE_LOG_AZ_SPAN("Payload:", publish_message.out_payload);
+#endif
 }
 
 static void temp_controller_build_telemetry_message(az_span payload, az_span* out_payload)

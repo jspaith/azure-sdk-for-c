@@ -8,6 +8,17 @@
 
 #include <azure/az_core.h>
 
+#ifdef _MSC_VER
+#pragma warning(push)
+// warning C4201: nonstandard extension used: nameless struct/union
+#pragma warning(disable : 4201)
+#endif
+#include <paho-mqtt/MQTTClient.h>
+#ifdef _MSC_VER
+#pragma warning(pop)
+#endif
+
+
 #define PNP_MQTT_TIMEOUT_RECEIVE_MAX_MESSAGE_COUNT 100
 #define PNP_MQTT_TIMEOUT_RECEIVE_MS (8 * 1000)
 #define PNP_MQTT_TIMEOUT_DISCONNECT_MS (10 * 1000)
@@ -39,5 +50,9 @@ az_result pnp_mqtt_message_init(pnp_mqtt_message* out_mqtt_message);
  * @return An #az_span containing the request id.
  */
 az_span pnp_mqtt_get_request_id(void);
+
+
+void publish_mqtt_message(MQTTClient mqtt_client, char const* topic, az_span payload, int qos);
+
 
 #endif // PNP_MQTT_MESSAGE_H

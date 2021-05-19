@@ -36,7 +36,8 @@ static double const total_storage_property_value = 1024.0;
 static az_span const total_memory_property_name = AZ_SPAN_LITERAL_FROM_STR("totalMemory");
 static double const total_memory_property_value = 128;
 
-void pnp_device_info_build_reported_property(az_span payload, az_span* out_payload)
+
+static void pnp_device_info_build_reported_property(az_span payload, az_span* out_payload)
 {
   char const* const log = "Failed to build reported property payload for device info";
 
@@ -86,4 +87,29 @@ void pnp_device_info_build_reported_property(az_span payload, az_span* out_paylo
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_end_object(&jw), log);
 
   *out_payload = az_json_writer_get_bytes_used_in_destination(&jw);
+}
+
+
+void pnp_device_info_send_reported_properties(az_iot_hub_client* hub_client, MQTTClient mqtt_client)
+{
+  pnp_mqtt_message publish_message;
+  pnp_mqtt_message_init(&publish_message);
+
+  // Get the property PATCH topic to send a reported property update.
+  az_result rc = az_iot_hub_client_properties_patch_get_publish_topic(
+      hub_client,
+      pnp_mqtt_get_request_id(),
+      publish_message.topic,
+      publish_message.topic_length,
+      NULL);
+  IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Failed to get the property PATCH topic");
+
+  pnp_device_info_build_reported_property(publish_message.payload, &publish_message.out_payload);
+
+  // Publish the device info reported property update.
+  publish_mqtt_message(
+      mqtt_client, publish_message.topic, publish_message.payload, IOT_SAMPLE_MQTT_PUBLISH_QOS);
+  IOT_SAMPLE_LOG_SUCCESS("Client sent reported property message for device info.");
+  IOT_SAMPLE_LOG_AZ_SPAN("Payload:", publish_message.payload);
+  IOT_SAMPLE_LOG(" "); // Formatting
 }
