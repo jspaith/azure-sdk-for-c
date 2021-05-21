@@ -56,17 +56,8 @@ static az_span pnp_device_components[] = { AZ_SPAN_LITERAL_FROM_STR("thermostat1
 static int32_t const pnp_components_length
     = sizeof(pnp_device_components) / sizeof(pnp_device_components[0]);
 
-// Plug and Play property values
-static az_span const reported_property_serial_number_name
-    = AZ_SPAN_LITERAL_FROM_STR("serialNumber");
-static az_span property_reported_serial_number_property_value = AZ_SPAN_LITERAL_FROM_STR("ABCDEFG");
-static az_span const property_response_failed = AZ_SPAN_LITERAL_FROM_STR("failed");
-
 // Plug and Play command values
 static az_span const command_empty_response_payload = AZ_SPAN_LITERAL_FROM_STR("{}");
-
-// Plug and Play telemetry values
-static az_span const telemetry_working_set_name = AZ_SPAN_LITERAL_FROM_STR("workingSet");
 
 static iot_sample_environment_variables env_vars;
 static az_iot_hub_client hub_client;
@@ -126,130 +117,6 @@ static az_result append_simple_json_token(az_json_writer* jw, az_json_token* jso
  *
  * To interact with this sample, you must use the Azure IoT Explorer. The capabilities are
  * properties, commands, and telemetry:
- *
- * Properties: The following properties are supported in this sample:
- *
- * Temperature Controller:
- * - A reported property named `serialNumber` with a `string` value for the device serial number.
- *
- * Device Info:
- * - A reported property named `manufacturer` with a `string` value for the name of the device
- * manufacturer.
- * - A reported property named `model` with a `string` value for the name of the device model.
- * - A reported property named `swVersion` with a `string` value for the software version running on
- * the device.
- * - A reported property named `osName` with a `string` value for the name of the operating system
- * running on the device.
- * - A reported property named `processorArchitecture` with a `string` value for the name of the
- * device architecture.
- * - A reported property named `processorManufacturer` with a `string` value for the name of the
- * device's processor manufacturer.
- * - A reported property named `totalStorage` with a `double` value for the total storage in KiB on
- * the device.
- * - A reported property named `totalMemory` with a `double` value for the total memory in KiB on
- * the device.
- *
- * Temperature Sensor:
- * - A desired property named `targetTemperature` with a `double` value for the desired temperature.
- * - A reported property named `maxTempSinceLastReboot` with a `double` value for the highest
- * temperature reached since boot.
- *
- * On initial bootup of the device, the sample will send the Temperature Controller reported
- * properties to the service. You will see the following in the device property JSON.
- *   {
- *     "properties": {
- *       "reported": {
- *         "manufacturer": "Sample-Manufacturer",
- *         "model": "pnp-sample-Model-123",
- *         "swVersion": "1.0.0.0",
- *         "osName": "Contoso",
- *         "processorArchitecture": "Contoso-Arch-64bit",
- *         "processorManufacturer": "Processor Manufacturer(TM)",
- *         "totalStorage": 1024,
- *         "totalMemory": 128,
- *         "serialNumber": "ABCDEFG",
- *       }
- *     }
- *   }
- *
- * To send a Temperature Sensor device desired property message, select your device's Device
- * Twin tab in the Azure IoT Explorer. Add the property targetTemperature along with a corresponding
- * value to the corresponding thermostat in the desired section of the JSON. Select Save to update
- * the property document and send the property message to the device.
- *   {
- *     "properties": {
- *       "desired": {
- *         "thermostat1": {
- *           "targetTemperature": 34.8
- *         },
- *         "thermostat2": {
- *           "targetTemperature": 68.5
- *         }
- *       }
- *     }
- *   }
- *
- * Upon receiving a desired property message, the sample will update the property locally and
- * send a reported property of the same name back to the service. This message will include a set of
- * "ack" values: `ac` for the HTTP-like ack code, `av` for ack version of the property, and an
- * optional `ad` for an ack description.
- *   {
- *     "properties": {
- *       "reported": {
- *         "thermostat1": {
- *           "__t": "c",
- *           "maxTempSinceLastReboot": 38.2,
- *           "targetTemperature": {
- *             "value": 34.8,
- *             "ac": 200,
- *             "av": 27,
- *             "ad": "success"
- *           }
- *         },
- *         "thermostat2": {
- *           "__t": "c",
- *           "maxTempSinceLastReboot": 69.1,
- *           "targetTemperature": {
- *             "value": 68.5,
- *             "ac": 200,
- *             "av": 28,
- *             "ad": "success"
- *           }
- *         }
- *       }
- *     }
- *   }
- *
- * Command: Two device commands are supported in this sample: `reboot` and
- * `getMaxMinReport`. If any other commands are attempted to be invoked, the log will report the
- * command is not found. To invoke a command, select your device's Direct Method tab in the Azure
- * IoT Explorer.
- *
- * - To invoke `reboot` on the Temperature Controller, enter the command name `reboot`. Select
- * Invoke method.
- * - To invoke `getMaxMinReport` on Temperature Sensor 1, enter the command name
- * `thermostat1/getMaxMinReport` along with a payload using an ISO8601 time format. Select Invoke
- * method.
- * - To invoke `getMaxMinReport` on Temperature Sensor 2, enter the command name
- * `thermostat2/getMaxMinReport` along with a payload using an ISO8601 time format. Select Invoke
- * method.
- *
- *   "2020-08-18T17:09:29-0700"
- *
- * The command will send back to the service a response containing the following JSON payload with
- * updated values in each field:
- *   {
- *     "maxTemp": 74.3,
- *     "minTemp": 65.2,
- *     "avgTemp": 68.79,
- *     "startTime": "2020-08-18T17:09:29-0700",
- *     "endTime": "2020-08-18T17:24:32-0700"
- *   }
- *
- * Telemetry: The Temperature Controller sends a JSON message with the property name `workingSet`
- * and a `double` value for the current working set of the device memory in KiB. Also, each
- * Temperature Sensor sends a JSON message with the property name `temperature` and a `double`
- * value for the current temperature.
  */
 int main(void)
 {
@@ -410,28 +277,7 @@ static void send_device_info(void)
 
 static void send_serial_number(void)
 {
-  // Get the property PATCH topic to send a reported property update.
-  az_result rc = az_iot_hub_client_properties_patch_get_publish_topic(
-      &hub_client,
-      pnp_mqtt_get_request_id(),
-      publish_message.topic,
-      publish_message.topic_length,
-      NULL);
-  IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Failed to get the property PATCH topic");
-
-  // Build the serial number reported property message.
-  temp_controller_build_serial_number_reported_property(
-      publish_message.payload, &publish_message.out_payload);
-
-  // Publish the serial number reported property update.
-  publish_mqtt_message(
-      mqtt_client, publish_message.topic, publish_message.out_payload, IOT_SAMPLE_MQTT_PUBLISH_QOS);
-  IOT_SAMPLE_LOG_SUCCESS(
-      "Client sent `%.*s` reported property message.",
-      az_span_size(reported_property_serial_number_name),
-      az_span_ptr(reported_property_serial_number_name));
-  IOT_SAMPLE_LOG_AZ_SPAN("Payload:", publish_message.out_payload);
-  IOT_SAMPLE_LOG(" "); // Formatting
+    pnp_temp_controller_send_serial_number(&hub_client, mqtt_client);
 }
 
 static void request_all_properties(void)
@@ -747,42 +593,6 @@ static void send_telemetry_messages(void)
 {
   pnp_thermostat_send_telemetry_message(&thermostat_1, &hub_client, mqtt_client);
   pnp_thermostat_send_telemetry_message(&thermostat_2, &hub_client, mqtt_client);
-}
-
-static void temp_controller_build_telemetry_message(az_span payload, az_span* out_payload)
-{
-  int32_t working_set_ram_in_kibibytes = rand() % 128;
-
-  az_json_writer jr;
-
-  const char* const log = "Failed to build telemetry payload";
-
-  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_init(&jr, payload, NULL), log);
-  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_begin_object(&jr), log);
-  IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-      az_json_writer_append_property_name(&jr, telemetry_working_set_name), log);
-  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_int32(&jr, working_set_ram_in_kibibytes), log);
-  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_end_object(&jr), log);
-
-  *out_payload = az_json_writer_get_bytes_used_in_destination(&jr);
-}
-
-static void temp_controller_build_serial_number_reported_property(
-    az_span payload,
-    az_span* out_payload)
-{
-  az_json_writer jw;
-
-  const char* const log = "Failed to build reported property payload";
-
-  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_init(&jw, payload, NULL), log);
-  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_begin_object(&jw), log);
-  IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-      az_json_writer_append_property_name(&jw, reported_property_serial_number_name), log);
-  IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-      az_json_writer_append_string(&jw, property_reported_serial_number_property_value), log);
-  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_end_object(&jw), log);
-
-  *out_payload = az_json_writer_get_bytes_used_in_destination(&jw);
+  pnp_temp_controller_send_telemetry_message(&hub_client, mqtt_client);
 }
 
