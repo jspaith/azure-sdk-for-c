@@ -372,7 +372,7 @@ az_result pnp_thermostat_process_property_update(
   if (!az_json_token_is_text_equal(
           &property_name_and_value->token, property_desired_temperature_property_name))
   {
-    // Ignore token, but we need to advance.  Need to investigate how to do this if nested.
+    // Ignore token, but we need to advance.  TODO: investigate how to do this if nested.
     IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_reader_next_token(property_name_and_value), log);
     IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_reader_next_token(property_name_and_value), log);
     return false;
@@ -408,36 +408,55 @@ az_result pnp_thermostat_process_property_update(
 
 bool pnp_thermostat_process_command_request(
     pnp_thermostat_component const* thermostat_component,
-    az_span command_name,
-    az_span command_received_payload,
-    az_span payload,
-    az_span* out_payload,
-    az_iot_status* out_status)
+    az_iot_hub_client const* hub_client,
+    MQTTClient mqtt_client,
+    az_iot_hub_client_command_request const* command_request,
+    az_span command_received_payload)
 {
-  if (az_span_is_content_equal(command_getMaxMinReport_name, command_name))
+  pnp_mqtt_message publish_message;
+  pnp_mqtt_message_init(&publish_message);
+
+  az_iot_status status;
+
+  if (az_span_is_content_equal(command_getMaxMinReport_name, command_request->command_name))
   {
     // Invoke command.
     if (invoke_getMaxMinReport(
-            thermostat_component, command_received_payload, payload, out_payload))
+            thermostat_component, command_received_payload, publish_message.payload, &publish_message.out_payload))
     {
-      *out_status = AZ_IOT_STATUS_OK;
+      status = AZ_IOT_STATUS_OK;
     }
     else
     {
-      *out_payload = command_empty_response_payload;
-      *out_status = AZ_IOT_STATUS_BAD_REQUEST;
+      publish_message.out_payload = command_empty_response_payload;
+      status = AZ_IOT_STATUS_BAD_REQUEST;
       IOT_SAMPLE_LOG_AZ_SPAN(
-          "Bad request when invoking command on Thermostat Sensor component:", command_name);
-      return false;
+          "Bad request when invoking command on Thermostat Sensor component:", command_request->command_name);
     }
   }
   else // Unsupported command
   {
-    *out_payload = command_empty_response_payload;
-    *out_status = AZ_IOT_STATUS_NOT_FOUND;
-    IOT_SAMPLE_LOG_AZ_SPAN("Command not supported on Thermostat Sensor component:", command_name);
-    return false;
+    publish_message.out_payload = command_empty_response_payload;
+    status = AZ_IOT_STATUS_NOT_FOUND;
+    IOT_SAMPLE_LOG_AZ_SPAN("Command not supported on Thermostat Sensor component:", command_request->command_name);
   }
+
+  // Get the commands response topic to publish the command response.
+  az_result rc = az_iot_hub_client_commands_response_get_publish_topic(
+      hub_client,
+      command_request->request_id,
+      (uint16_t)status,
+      publish_message.topic,
+      publish_message.topic_length,
+      NULL);
+  IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Failed to get the commands response topic");
+
+  // Publish the command response.
+  publish_mqtt_message(
+      mqtt_client, publish_message.topic, publish_message.out_payload, IOT_SAMPLE_MQTT_PUBLISH_QOS);
+  IOT_SAMPLE_LOG_SUCCESS("Client published command response.");
+  IOT_SAMPLE_LOG("Status: %d", status);
+  IOT_SAMPLE_LOG_AZ_SPAN("Payload:", publish_message.out_payload);
 
   return true;
 }

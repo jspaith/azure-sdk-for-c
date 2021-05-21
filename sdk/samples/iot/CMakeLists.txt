@@ -92,6 +92,28 @@ target_link_libraries(paho_iot_pnp_with_provisioning_sample
 
 create_map_file(paho_iot_pnp_with_provisioning_sample paho_iot_pnp_with_provisioning_sample.map)
 
+# PnP Component Sample
+add_executable (paho_iot_pnp_component_sample
+  ${CMAKE_CURRENT_LIST_DIR}/pnp/pnp_mqtt_message.c
+  ${CMAKE_CURRENT_LIST_DIR}/pnp/pnp_device_info_component.c
+  ${CMAKE_CURRENT_LIST_DIR}/pnp/pnp_thermostat_component.c
+  ${CMAKE_CURRENT_LIST_DIR}/pnp/pnp_tempcontroller_component.c
+  ${CMAKE_CURRENT_LIST_DIR}/paho_iot_pnp_component_sample.c
+)
+
+# SDK deps
+target_link_libraries(paho_iot_pnp_component_sample
+  PRIVATE
+    az::iot::sample::common
+)
+
+target_include_directories(paho_iot_pnp_component_sample
+  PRIVATE
+    ${CMAKE_CURRENT_LIST_DIR}
+)
+
+create_map_file(paho_iot_pnp_component_sample paho_iot_pnp_component_sample.map)
+
 # Telemetry (Certificates) Sample
 add_executable (paho_iot_hub_telemetry_sample
   ${CMAKE_CURRENT_LIST_DIR}/paho_iot_hub_telemetry_sample.c

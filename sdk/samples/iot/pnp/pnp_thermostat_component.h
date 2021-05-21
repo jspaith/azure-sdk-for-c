@@ -41,62 +41,7 @@ az_result pnp_thermostat_init(
     az_span component_name,
     double initial_temperature);
 
-#if 0
-/**
- * @brief Build the thermostat's temperature telemetry message.
- *
- * @param[in] thermostat_component A pointer to the themostat component to get data.
- * @param[in] payload An #az_span with sufficient capacity to hold the json payload.
- * @param[out] out_payload A pointer to the #az_span containing the output json payload.
- */
-void pnp_thermostat_build_telemetry_message(
-    pnp_thermostat_component* thermostat_component,
-    az_span payload,
-    az_span* out_payload);
-#endif 
-
 void pnp_thermostat_send_telemetry_message(pnp_thermostat_component* thermostat_component, az_iot_hub_client const* hub_client, MQTTClient mqtt_client);
-
-
-#if 0
-/**
- * @brief Build the thermostat's maximum temperature reported property message.
- *
- * @param[in] pnp_client The #az_iot_hub_client to use for this call.
- * @param[in] thermostat_component A pointer to the themostat component to get data.
- * @param[in] payload An #az_span with sufficient capacity to hold the json payload.
- * @param[out] out_payload A pointer to the #az_span containing the output json payload.
- * @param[out] out_property_name The name of the reported property to be sent.
- */
-void pnp_thermostat_build_maximum_temperature_reported_property(
-    az_iot_hub_client const* pnp_client,
-    pnp_thermostat_component* thermostat_component,
-    az_span payload,
-    az_span* out_payload,
-    az_span* out_property_name);
-#endif
-
-/**
- * @brief Build the thermostat's error message with status.
- *
- * @param[in] pnp_client The #az_iot_hub_client to use for this call.
- * @param[in] component_name The name of the component for the reported property.
- * @param[in] property_name The name of the property for which to send an update.
- * @param[in] property_value The property value to be appended.
- * @param[in] status The return status for the error message ack.
- * @param[in] version The version for the reported property ack.
- * @param[in] payload An #az_span with sufficient capacity to hold the json payload.
- * @param[out] out_payload A pointer to the #az_span containing the output json payload.
- */
-void pnp_thermostat_build_error_reported_property_with_status(
-    az_iot_hub_client const* pnp_client,
-    az_span component_name,
-    az_span property_name,
-    az_json_reader* property_value,
-    az_iot_status status,
-    int32_t version,
-    az_span payload,
-    az_span* out_payload);
 
 /**
  * @brief Update the thermostat's member variables and prepare reported property message.
@@ -140,10 +85,9 @@ az_result pnp_thermostat_process_property_update(
  */
 bool pnp_thermostat_process_command_request(
     pnp_thermostat_component const* thermostat_component,
-    az_span command_name,
-    az_span command_received_payload,
-    az_span payload,
-    az_span* out_payload,
-    az_iot_status* out_status);
+    az_iot_hub_client const* hub_client,
+    MQTTClient mqtt_client,
+    az_iot_hub_client_command_request const* command_request,
+    az_span command_received_payload);
 
 #endif // PNP_THERMOSTAT_COMPONENT_H

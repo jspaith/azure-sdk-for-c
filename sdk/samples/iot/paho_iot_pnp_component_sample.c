@@ -26,6 +26,7 @@
 #include "pnp/pnp_device_info_component.h"
 #include "pnp/pnp_mqtt_message.h"
 #include "pnp/pnp_thermostat_component.h"
+#include "pnp/pnp_tempcontroller_component.h"
 
 #define SAMPLE_TYPE PAHO_IOT_HUB
 #define SAMPLE_NAME PAHO_IOT_PNP_COMPONENT_SAMPLE
@@ -62,7 +63,6 @@ static az_span property_reported_serial_number_property_value = AZ_SPAN_LITERAL_
 static az_span const property_response_failed = AZ_SPAN_LITERAL_FROM_STR("failed");
 
 // Plug and Play command values
-static az_span const command_reboot_name = AZ_SPAN_LITERAL_FROM_STR("reboot");
 static az_span const command_empty_response_payload = AZ_SPAN_LITERAL_FROM_STR("{}");
 
 // Plug and Play telemetry values
@@ -108,12 +108,6 @@ static void temp_controller_build_telemetry_message(az_span payload, az_span* ou
 static void temp_controller_build_serial_number_reported_property(
     az_span payload,
     az_span* out_payload);
-static bool temp_controller_process_command_request(
-    az_span command_name,
-    az_span command_payload,
-    az_span payload,
-    az_span* out_payload,
-    az_iot_status* out_status);
 static void temp_controller_invoke_reboot(void);
 
 static az_result append_simple_json_token(az_json_writer* jw, az_json_token* json_token);
@@ -630,80 +624,16 @@ static void process_property_message(
       }
       else
       {
-        IOT_SAMPLE_LOG_ERROR(
-            "Temperature Controller does not support writable property \"%.*s\". All writeable "
-            "properties are on sub-components.",
-            az_span_size(jr.token.slice),
-            az_span_ptr(jr.token.slice));
+        char const* const log = "Failed to process property update";
 
-        // Get the property PATCH topic to send a reported property update.
-        rc = az_iot_hub_client_properties_patch_get_publish_topic(
-            &hub_client,
-            pnp_mqtt_get_request_id(),
-            publish_message.topic,
-            publish_message.topic_length,
-            NULL);
-        IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Failed to get property PATCH publish topic");
+        // Only the thermostat component supports writeable properties;
+        // the models for DeviceInfo and the temperature controller do not.
+        // We do NOT report back an error for an unknown property to IoT Hub, 
+        // but we do need to skip past the JSON part of the body to continue reading.
+        IOT_SAMPLE_LOG_ERROR("Received property update for an unsupported component");
 
-        // Build the root component error reported property message.
-        az_json_writer jw;
-        IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-            az_json_writer_init(&jw, publish_message.payload, NULL),
-            "Could not initialize the json writer");
-
-        IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-            az_json_writer_append_begin_object(&jw), "Could not append the begin object");
-
-        if (az_span_size(component_name) > 0)
-        {
-          IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-              az_iot_hub_client_properties_builder_begin_component(
-                  &hub_client, &jw, component_name),
-              "Could not begin the property component");
-        }
-
-        IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-            az_iot_hub_client_properties_builder_begin_response_status(
-                &hub_client,
-                &jw,
-                jr.token.slice,
-                AZ_IOT_STATUS_NOT_FOUND,
-                version,
-                property_response_failed),
-            "Could not begin the property with status");
-
-        IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-            az_json_reader_next_token(&jr), "Could not advance to property value");
-
-        IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-            append_simple_json_token(&jw, &jr.token), "Could not append the property");
-
-        IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-            az_iot_hub_client_properties_builder_end_response_status(&hub_client, &jw),
-            "Could not end the property with status");
-
-        if (az_span_size(component_name) > 0)
-        {
-          IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-              az_iot_hub_client_properties_builder_end_component(&hub_client, &jw),
-              "Could not end the property component");
-        }
-
-        IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-            az_json_writer_append_end_object(&jw), "Could not append end the object");
-
-        publish_message.out_payload = az_json_writer_get_bytes_used_in_destination(&jw);
-
-        // Send error response to the updated property.
-        publish_mqtt_message(
-            mqtt_client, publish_message.topic, publish_message.out_payload, IOT_SAMPLE_MQTT_PUBLISH_QOS);
-        IOT_SAMPLE_LOG_SUCCESS(
-            "Client sent Temperature Controller error status reported property message:");
-        IOT_SAMPLE_LOG_AZ_SPAN("Payload:", publish_message.out_payload);
-
-        // Advance to next property name
-        IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-            az_json_reader_next_token(&jr), "Could not move to next property name");
+        IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_reader_next_token(&jr), log);
+        IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_reader_next_token(&jr), log);
       }
     }
     else
@@ -755,12 +685,7 @@ static void handle_command_request(
   // Invoke command and retrieve status and response payload to send to server.
   if (az_span_size(command_request->component_name) == 0)
   {
-    if (az_result_succeeded(temp_controller_process_command_request(
-            command_request->command_name,
-            message_span,
-            publish_message.payload,
-            &publish_message.out_payload,
-            &status)))
+    if (pnp_temp_controller_process_command_request(&hub_client, mqtt_client, command_request, message_span))
     {
       IOT_SAMPLE_LOG_AZ_SPAN(
           "Client invoked command on Temperature Controller:", command_request->command_name);
@@ -770,11 +695,10 @@ static void handle_command_request(
   {
     if (pnp_thermostat_process_command_request(
             &thermostat_1,
-            command_request->command_name,
-            message_span,
-            publish_message.payload,
-            &publish_message.out_payload,
-            &status))
+            &hub_client,
+            mqtt_client,
+            command_request,
+            message_span))
     {
       IOT_SAMPLE_LOG_AZ_SPAN(
           "Client invoked command on Temperature Sensor 1:", command_request->command_name);
@@ -784,14 +708,13 @@ static void handle_command_request(
   {
     if (pnp_thermostat_process_command_request(
             &thermostat_2,
-            command_request->command_name,
-            message_span,
-            publish_message.payload,
-            &publish_message.out_payload,
-            &status))
+            &hub_client,
+            mqtt_client,
+            command_request,
+            message_span))
     {
       IOT_SAMPLE_LOG_AZ_SPAN(
-          "Client invoked command on Temperature Sensor 2:", command_request->command_name);
+          "Client invoked command on Temperature Sensor 1:", command_request->command_name);
     }
   }
   else
@@ -799,47 +722,31 @@ static void handle_command_request(
     IOT_SAMPLE_LOG_AZ_SPAN("Command not supported:", command_request->command_name);
     publish_message.out_payload = command_empty_response_payload;
     status = AZ_IOT_STATUS_NOT_FOUND;
+
+    // Get the commands response topic to publish the command response.
+    az_result rc = az_iot_hub_client_commands_response_get_publish_topic(
+        &hub_client,
+        command_request->request_id,
+        (uint16_t)status,
+        publish_message.topic,
+        publish_message.topic_length,
+        NULL);
+    IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Failed to get the commands response topic");
+  
+    // Publish the command response.
+    publish_mqtt_message(
+        mqtt_client, publish_message.topic, publish_message.out_payload, IOT_SAMPLE_MQTT_PUBLISH_QOS);
+    IOT_SAMPLE_LOG_SUCCESS("Client published command response.");
+    IOT_SAMPLE_LOG("Status: %d", status);
+    IOT_SAMPLE_LOG_AZ_SPAN("Payload:", publish_message.out_payload);
+
   }
-
-  // Get the commands response topic to publish the command response.
-  az_result rc = az_iot_hub_client_commands_response_get_publish_topic(
-      &hub_client,
-      command_request->request_id,
-      (uint16_t)status,
-      publish_message.topic,
-      publish_message.topic_length,
-      NULL);
-  IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Failed to get the commands response topic");
-
-  // Publish the command response.
-  publish_mqtt_message(
-      mqtt_client, publish_message.topic, publish_message.out_payload, IOT_SAMPLE_MQTT_PUBLISH_QOS);
-  IOT_SAMPLE_LOG_SUCCESS("Client published command response.");
-  IOT_SAMPLE_LOG("Status: %d", status);
-  IOT_SAMPLE_LOG_AZ_SPAN("Payload:", publish_message.out_payload);
 }
 
 static void send_telemetry_messages(void)
 {
   pnp_thermostat_send_telemetry_message(&thermostat_1, &hub_client, mqtt_client);
   pnp_thermostat_send_telemetry_message(&thermostat_2, &hub_client, mqtt_client);
-
-#if 0
-  // Temperature Controller
-  // Get the telemetry topic to publish the telemetry message.
-  rc = az_iot_hub_client_telemetry_get_publish_topic(
-      &hub_client, NULL, publish_message.topic, publish_message.topic_length, NULL);
-  IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Failed to get the telemetry topic");
-
-  // Build the telemetry message.
-  temp_controller_build_telemetry_message(publish_message.payload, &publish_message.out_payload);
-
-  // Publish the telemetry message.
-  publish_mqtt_message(
-      mqtt_client, publish_message.topic, publish_message.out_payload, IOT_SAMPLE_MQTT_PUBLISH_QOS);
-  IOT_SAMPLE_LOG_SUCCESS("Client published the telemetry message for the Temperature Controller.");
-  IOT_SAMPLE_LOG_AZ_SPAN("Payload:", publish_message.out_payload);
-#endif
 }
 
 static void temp_controller_build_telemetry_message(az_span payload, az_span* out_payload)
@@ -879,54 +786,3 @@ static void temp_controller_build_serial_number_reported_property(
   *out_payload = az_json_writer_get_bytes_used_in_destination(&jw);
 }
 
-static bool temp_controller_process_command_request(
-    az_span command_name,
-    az_span command_received_payload,
-    az_span payload,
-    az_span* out_payload,
-    az_iot_status* out_status)
-{
-  (void)command_received_payload; // Not used
-  (void)payload; // Not used
-
-  if (az_span_is_content_equal(command_reboot_name, command_name))
-  {
-    // Invoke command.
-    temp_controller_invoke_reboot();
-    *out_payload = command_empty_response_payload;
-    *out_status = AZ_IOT_STATUS_OK;
-  }
-  else // Unsupported command
-  {
-    *out_payload = command_empty_response_payload;
-    *out_status = AZ_IOT_STATUS_NOT_FOUND;
-    IOT_SAMPLE_LOG_AZ_SPAN("Command not supported on Temperature Controller:", command_name);
-    return false;
-  }
-
-  return true;
-}
-
-static void temp_controller_invoke_reboot(void)
-{
-  IOT_SAMPLE_LOG("Client invoking reboot command on Temperature Controller.");
-}
-
-static az_result append_simple_json_token(az_json_writer* jw, az_json_token* value)
-{
-  char const* const log = "Failed to append json token";
-
-  az_json_token value_token = *(az_json_token*)value;
-
-  switch (value_token.kind)
-  {
-    case AZ_JSON_TOKEN_STRING:
-      IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_string(jw, value->slice), log);
-      break;
-    default:
-      IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_json_text(jw, value->slice), log);
-      break;
-  }
-
-  return AZ_OK;
-}
