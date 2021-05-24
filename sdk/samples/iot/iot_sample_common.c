@@ -230,8 +230,8 @@ void iot_sample_read_environment_variables(
 
     switch (name)
     {
-      case PAHO_IOT_PROVISIONING_SAMPLE:
       case PAHO_IOT_PNP_WITH_PROVISIONING_SAMPLE:
+      case PAHO_IOT_PROVISIONING_SAMPLE:
         out_env_vars->provisioning_registration_id
             = AZ_SPAN_FROM_BUFFER(iot_sample_provisioning_registration_id_buffer);
         read_configuration_entry(
