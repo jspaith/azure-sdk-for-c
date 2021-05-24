@@ -492,7 +492,7 @@ static void process_device_property_message(
       }
       else
       {
-        char const* const log = "Failed to process property update";
+        char const* const log_message = "Failed to process property update";
 
         // Only the thermostat component supports writeable properties;
         // the models for DeviceInfo and the temperature controller do not.
@@ -503,8 +503,8 @@ static void process_device_property_message(
         // Even though we don't process this message, we still need to advance the JSON reader
         // so that az_iot_hub_client_properties_get_next_component_property is setup for its
         // next invocation.
-        IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_reader_next_token(&jr), log);
-        IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_reader_next_token(&jr), log);
+        IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_reader_next_token(&jr), log_message);
+        IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_reader_next_token(&jr), log_message);
       }
     }
     else
@@ -558,11 +558,7 @@ static void handle_command_request(
   // to parse the request and respond to Azure IoT Hub.
   if (az_span_size(command_request->component_name) == 0)
   {
-    if (pnp_temp_controller_process_command_request(&hub_client, mqtt_client, command_request, message_span))
-    {
-      IOT_SAMPLE_LOG_AZ_SPAN(
-          "Client invoked command on Temperature Controller:", command_request->command_name);
-    }
+    pnp_temp_controller_process_command_request(&hub_client, mqtt_client, command_request, message_span);
   }
   else if (az_span_is_content_equal(thermostat_1.component_name, command_request->component_name))
   {

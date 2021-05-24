@@ -31,7 +31,7 @@ static az_span const reported_property_serial_number_name
     = AZ_SPAN_LITERAL_FROM_STR("serialNumber");
 static az_span property_reported_serial_number_property_value = AZ_SPAN_LITERAL_FROM_STR("ABCDEFG");
 
-bool pnp_temp_controller_process_command_request(
+void pnp_temp_controller_process_command_request(
     az_iot_hub_client const* hub_client,
     MQTTClient mqtt_client,
     az_iot_hub_client_command_request const* command_request,
@@ -75,8 +75,6 @@ bool pnp_temp_controller_process_command_request(
   IOT_SAMPLE_LOG_SUCCESS("Client published command response.");
   IOT_SAMPLE_LOG("Status: %d", status);
   IOT_SAMPLE_LOG_AZ_SPAN("Payload:", publish_message.out_payload);
-
-  return true;
 }
 
 // temp_controller_build_serial_number_property_payload builds the JSON payload for
@@ -87,15 +85,15 @@ static void temp_controller_build_serial_number_property_payload(
 {
   az_json_writer jw;
 
-  const char* const log = "Failed to build reported property payload";
+  const char* const log_message = "Failed to build reported property payload";
 
-  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_init(&jw, payload, NULL), log);
-  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_begin_object(&jw), log);
+  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_init(&jw, payload, NULL), log_message);
+  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_begin_object(&jw), log_message);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-      az_json_writer_append_property_name(&jw, reported_property_serial_number_name), log);
+      az_json_writer_append_property_name(&jw, reported_property_serial_number_name), log_message);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-      az_json_writer_append_string(&jw, property_reported_serial_number_property_value), log);
-  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_end_object(&jw), log);
+      az_json_writer_append_string(&jw, property_reported_serial_number_property_value), log_message);
+  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_end_object(&jw), log_message);
 
   *out_payload = az_json_writer_get_bytes_used_in_destination(&jw);
 }
@@ -138,14 +136,14 @@ static void temp_controller_build_working_set_payload(az_span payload, az_span* 
 
   az_json_writer jr;
 
-  const char* const log = "Failed to build telemetry payload";
+  const char* const log_message = "Failed to build telemetry payload";
 
-  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_init(&jr, payload, NULL), log);
-  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_begin_object(&jr), log);
+  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_init(&jr, payload, NULL), log_message);
+  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_begin_object(&jr), log_message);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-      az_json_writer_append_property_name(&jr, telemetry_working_set_name), log);
-  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_int32(&jr, working_set_ram_in_kibibytes), log);
-  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_end_object(&jr), log);
+      az_json_writer_append_property_name(&jr, telemetry_working_set_name), log_message);
+  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_int32(&jr, working_set_ram_in_kibibytes), log_message);
+  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_end_object(&jr), log_message);
 
   *out_payload = az_json_writer_get_bytes_used_in_destination(&jr);
 }
