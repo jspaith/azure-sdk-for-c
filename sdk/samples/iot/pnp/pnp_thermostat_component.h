@@ -55,6 +55,17 @@ void pnp_thermostat_send_telemetry_message(
     MQTTClient mqtt_client);
 
 /**
+ * @brief Sends the maximum temperature since last reboot property.
+ *
+ * @param[in] hub_client An #az_iot_hub_client corresponding to this MQTT connection.
+ * @param[in] mqtt_client An MQTTClient corresponding to this MQTT connection.
+ */
+void pnp_thermostat_update_maximum_temperature_property(
+    pnp_thermostat_component* thermostat_component, 
+    az_iot_hub_client const* hub_client, 
+    MQTTClient mqtt_client);
+
+/**
  * @brief Processes a property update intended for thermostat component.  Parses request, build response, and responds via MQTT.
  *
  * @param[in, out] thermostat_component A pointer to the themostat on which to invoke the command.

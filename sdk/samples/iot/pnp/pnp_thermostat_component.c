@@ -282,14 +282,17 @@ static void pnp_thermostat_build_maximum_temperature_reported_payload(
 
 // pnp_thermostat_update_maximum_temperature_property sends the current temperature to the service in 
 // the property "maxTempSinceLastReboot".
-static void pnp_thermostat_update_maximum_temperature_property(pnp_thermostat_component* thermostat_component, az_iot_hub_client const* hub_client, MQTTClient mqtt_client, pnp_mqtt_message* publish_message)
+void pnp_thermostat_update_maximum_temperature_property(pnp_thermostat_component* thermostat_component, az_iot_hub_client const* hub_client, MQTTClient mqtt_client)
 {
+  pnp_mqtt_message publish_message;
+  pnp_mqtt_message_init(&publish_message);
+
   // Get the property PATCH topic to send a reported property update.
   az_result rc = az_iot_hub_client_properties_patch_get_publish_topic(
       hub_client,
       pnp_mqtt_get_request_id(),
-      publish_message->topic,
-      publish_message->topic_length,
+      publish_message.topic,
+      publish_message.topic_length,
       NULL);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Failed to get the property PATCH topic");
 
@@ -297,17 +300,17 @@ static void pnp_thermostat_update_maximum_temperature_property(pnp_thermostat_co
   pnp_thermostat_build_maximum_temperature_reported_payload(
       hub_client,
       thermostat_component,
-      publish_message->payload,
-      &publish_message->out_payload);
+      publish_message.payload,
+      &publish_message.out_payload);
 
   // Publish the maximum temperature reported property update.
   publish_mqtt_message(
-      mqtt_client, publish_message->topic, publish_message->out_payload, IOT_SAMPLE_MQTT_PUBLISH_QOS);
+      mqtt_client, publish_message.topic, publish_message.out_payload, IOT_SAMPLE_MQTT_PUBLISH_QOS);
   IOT_SAMPLE_LOG_SUCCESS(
       "Client sent Temperature Sensor the `%.*s` reported property message.",
       az_span_size(property_reported_maximum_temperature_property_name),
       az_span_ptr(property_reported_maximum_temperature_property_name));
-  IOT_SAMPLE_LOG_AZ_SPAN("Payload:", publish_message->out_payload);
+  IOT_SAMPLE_LOG_AZ_SPAN("Payload:", publish_message.out_payload);
   IOT_SAMPLE_LOG(" "); // Formatting
 }
 
@@ -428,7 +431,7 @@ az_result pnp_thermostat_process_property_update(
   if (thermostat_component->send_maximum_temperature_property == true)
   {
     // This is the highest temperature we've seen so far.  Update the service.
-    pnp_thermostat_update_maximum_temperature_property(thermostat_component, hub_client, mqtt_client, &publish_message);
+    pnp_thermostat_update_maximum_temperature_property(thermostat_component, hub_client, mqtt_client);
     thermostat_component->send_maximum_temperature_property = false;
   }
 
