@@ -41,7 +41,10 @@ az_result pnp_thermostat_init(
     az_span component_name,
     double initial_temperature);
 
-void pnp_thermostat_send_telemetry_message(pnp_thermostat_component* thermostat_component, az_iot_hub_client const* hub_client, MQTTClient mqtt_client);
+void pnp_thermostat_send_telemetry_message(
+    pnp_thermostat_component* thermostat_component, 
+    az_iot_hub_client const* hub_client, 
+    MQTTClient mqtt_client);
 
 /**
  * @brief Update the thermostat's member variables and prepare reported property message.
@@ -60,10 +63,10 @@ void pnp_thermostat_send_telemetry_message(pnp_thermostat_component* thermostat_
  * @retval True if property updated. False if property does not belong to thermostat component.
  */
 az_result pnp_thermostat_process_property_update(
-    az_iot_hub_client const* hub_client,
     pnp_thermostat_component* thermostat_component,
-    az_json_reader* property_name_and_value,
+    az_iot_hub_client const* hub_client,
     MQTTClient mqtt_client,
+    az_json_reader* property_name_and_value,
     int32_t version);
 
 /**

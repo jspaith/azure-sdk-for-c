@@ -1,6 +1,15 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // SPDX-License-Identifier: MIT
 
+/*
+ * The Device Info component is a sample that sends (simulated) device information.
+ * It implements the model defined in the DTDLv2 https://devicemodels.azure.com/dtmi/azure/devicemanagement/deviceinformation-1.json.
+ * 
+ * This sample does not setup its own connection to Azure IoT Hub.  It is invoked by ../paho_iot_pnp_component_sample.c
+ * which handles connection management.
+ *
+*/
+
 #include <stddef.h>
 
 #include <azure/az_core.h>
@@ -36,19 +45,19 @@ static double const total_storage_property_value = 1024.0;
 static az_span const total_memory_property_name = AZ_SPAN_LITERAL_FROM_STR("totalMemory");
 static double const total_memory_property_value = 128;
 
-
-static void pnp_device_info_build_reported_property(az_span payload, az_span* out_payload)
+// pnp_device_info_build_property_payload builds the JSON payload that contains simulated
+// device information.
+static void pnp_device_info_build_property_payload(az_iot_hub_client* hub_client, az_span payload, az_span* out_payload)
 {
   char const* const log = "Failed to build reported property payload for device info";
 
   az_json_writer jw;
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_init(&jw, payload, NULL), log);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_begin_object(&jw), log);
-  // TODO: the 0x1 here and below technically runs (not referenced by call) but no way we even take
-  // this to PR like this never mind ship. Need to figure out how to plumb the actual client down.
+
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(
       az_iot_hub_client_properties_builder_begin_component(
-          (az_iot_hub_client const*)0x1, &jw, deviceInformation_1_name),
+          hub_client, &jw, deviceInformation_1_name),
       log);
 
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(
@@ -89,7 +98,6 @@ static void pnp_device_info_build_reported_property(az_span payload, az_span* ou
   *out_payload = az_json_writer_get_bytes_used_in_destination(&jw);
 }
 
-
 void pnp_device_info_send_reported_properties(az_iot_hub_client* hub_client, MQTTClient mqtt_client)
 {
   pnp_mqtt_message publish_message;
@@ -104,7 +112,8 @@ void pnp_device_info_send_reported_properties(az_iot_hub_client* hub_client, MQT
       NULL);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Failed to get the property PATCH topic");
 
-  pnp_device_info_build_reported_property(publish_message.payload, &publish_message.out_payload);
+  // Get the payload to send
+  pnp_device_info_build_property_payload(hub_client, publish_message.payload, &publish_message.out_payload);
 
   // Publish the device info reported property update.
   publish_mqtt_message(

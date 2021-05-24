@@ -18,10 +18,9 @@
 #pragma warning(pop)
 #endif
 
-
-#define PNP_MQTT_TIMEOUT_RECEIVE_MAX_MESSAGE_COUNT 100
-#define PNP_MQTT_TIMEOUT_RECEIVE_MS (8 * 1000)
-#define PNP_MQTT_TIMEOUT_DISCONNECT_MS (10 * 1000)
+#define MQTT_TIMEOUT_RECEIVE_MAX_MESSAGE_COUNT 100
+#define MQTT_TIMEOUT_RECEIVE_MS (8 * 1000)
+#define MQTT_TIMEOUT_DISCONNECT_MS (10 * 1000)
 
 typedef struct
 {
@@ -51,8 +50,14 @@ az_result pnp_mqtt_message_init(pnp_mqtt_message* out_mqtt_message);
  */
 az_span pnp_mqtt_get_request_id(void);
 
-
+/**
+ * @brief Wrapper to publish an MQTT message.
+ * 
+ * @param[in] mqtt_client Pointer to connected MQTTClient handle to use to send message.
+ * @param[in] topic MQTT topic string to send message on.
+ * @param[in] payload An #az_span containing the payload.
+ * @param[in] qos MQTT QOS setting.
+ */
 void publish_mqtt_message(MQTTClient mqtt_client, char const* topic, az_span payload, int qos);
-
 
 #endif // PNP_MQTT_MESSAGE_H

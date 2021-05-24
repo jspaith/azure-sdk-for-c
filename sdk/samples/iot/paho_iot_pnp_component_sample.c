@@ -1,21 +1,36 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-#include <stdbool.h>
+/*
+ * This sample connects an Azure IoT Plug and Play enabled device.
+ *
+ * Azure IoT Plug and Play requires the device to advertise its capabilities in a device model. This
+ * sample's model is available in
+ * https://github.com/Azure/opendigitaltwins-dtdl/blob/master/DTDL/v2/samples/TemperatureController.json. See
+ * the sample README for more information on this model. For more information about IoT Plug and
+ * Play, see https://aka.ms/iotpnp.
+ *
+ * The sample loops listening for incoming commands and property updates and periodically (every
+ * MQTT_TIMEOUT_RECEIVE_MS milliseconds) will send a telemetry event.  After
+ * MQTT_TIMEOUT_RECEIVE_MAX_MESSAGE_COUNT loops without any service initiated operations, the sample
+ * will exit.
+ *
+ * This sample is composed of multiple sub-components.  These are implemented in separate .c files.
+ *   The temperature controller serves as the root component for this model.  It is implemented in 
+ *     ./pnp/pnp_temp_controller_component.c
+ *   There are two separate simulated thermostats which are modeled as "thermostat1" and "thermostat2".
+ *     ./pnp/pnp_thermostat_component.c implements these components.
+ *   The device information component returns simulated device information for this device.  It is implemented in
+ *     ./pnp/pnp_device_info_component.c
+ * 
+ * An X509 self-signed certificate is used for authentication, directly to IoT Hub.
+ *
+ */
+
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
-
-#include "iot_sample_common.h"
-
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
 
 #include <azure/core/az_json.h>
 #include <azure/core/az_result.h>
@@ -26,26 +41,21 @@
 #include "pnp/pnp_device_info_component.h"
 #include "pnp/pnp_mqtt_message.h"
 #include "pnp/pnp_thermostat_component.h"
-#include "pnp/pnp_tempcontroller_component.h"
+#include "pnp/pnp_temp_controller_component.h"
 
 #define SAMPLE_TYPE PAHO_IOT_HUB
 #define SAMPLE_NAME PAHO_IOT_PNP_COMPONENT_SAMPLE
 
 #define DEFAULT_START_TEMP_CELSIUS 22.0
-#define DOUBLE_DECIMAL_PLACE_DIGITS 2
 
 bool is_device_operational = true;
 
-// * PnP Values *
-// The model id is the JSON document (also called the Digital Twins Model Identifier or DTMI) which
-// defines the capability of your device. The functionality of the device should match what is
-// described in the corresponding DTMI. Should you choose to program your own PnP capable device,
-// the functionality would need to match the DTMI and you would need to update the below 'model_id'.
-// Please see the sample README for more information on this DTMI.
+// The model this device implements
 static az_span const model_id
     = AZ_SPAN_LITERAL_FROM_STR("dtmi:com:example:TemperatureController;1");
 
-// Components
+// Components.  thermostat_1 and thermostat_2 are effectively handles to
+// the underlying thermostat implementations.
 static pnp_thermostat_component thermostat_1;
 static pnp_thermostat_component thermostat_2;
 static az_span thermostat_1_name = AZ_SPAN_LITERAL_FROM_STR("thermostat1");
@@ -71,11 +81,11 @@ static pnp_mqtt_message publish_message;
 static void create_and_configure_mqtt_client(void);
 static void connect_mqtt_client_to_iot_hub(void);
 static void subscribe_mqtt_client_to_iot_hub_topics(void);
-static void initialize_components(void);
+static void initialize_thermostat_components(void);
 static void send_device_info(void);
 static void send_serial_number(void);
 static void request_all_properties(void);
-static void receive_messages(void);
+static void receive_messages_and_send_telemetry_loop(void);
 static void disconnect_mqtt_client_from_iot_hub(void);
 
 // General message sending and receiving functions
@@ -94,30 +104,8 @@ static void handle_command_request(
     az_iot_hub_client_command_request const* command_request);
 static void send_telemetry_messages(void);
 
-// Temperature controller functions
-static void temp_controller_build_telemetry_message(az_span payload, az_span* out_payload);
-static void temp_controller_build_serial_number_reported_property(
-    az_span payload,
-    az_span* out_payload);
-static void temp_controller_invoke_reboot(void);
-
 static az_result append_simple_json_token(az_json_writer* jw, az_json_token* json_token);
 
-/*
- * This sample extends the Azure IoT Plug and Play Sample above to mimic a Temperature Controller
- * and connects the Plug and Play enabled device (the Temperature Controller) with the Digital
- * Twin Model ID (DTMI). If a timeout occurs while waiting for a message from the Azure IoT
- * Explorer, the sample will continue. If PNP_MQTT_TIMEOUT_RECEIVE_MAX_COUNT timeouts occur
- * consecutively, the sample will disconnect. X509 self-certification is used.
- *
- * This Temperature Controller is made up of the following components:
- * - Device Info
- * - Temperature Sensor 1
- * - Temperature Sensor 2
- *
- * To interact with this sample, you must use the Azure IoT Explorer. The capabilities are
- * properties, commands, and telemetry:
- */
 int main(void)
 {
   create_and_configure_mqtt_client();
@@ -133,21 +121,33 @@ int main(void)
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(
       pnp_mqtt_message_init(&publish_message), "Failed to initialize pnp_mqtt_message");
 
-  initialize_components();
+  initialize_thermostat_components();
   IOT_SAMPLE_LOG_SUCCESS("Client initialized all components.");
 
-  // Messaging
+  // Send properties to the IoT Hub that will not change during
+  // the lifecycle of a connection (e.g. DeviceInfo and serial number) right
+  // after the initial connection.
   send_device_info();
   send_serial_number();
-  request_all_properties();
-  receive_messages();
 
+  // Sends an asychronous request to retrieve all properties about the device
+  // on Azure IoT Hub side.
+  request_all_properties();
+
+  // The device's main loop including primary Plug and Play interaction is
+  // in receive_messages_and_send_telemetry_loop.
+  receive_messages_and_send_telemetry_loop();
+
+  // Disconnect the MQTT connection.
   disconnect_mqtt_client_from_iot_hub();
   IOT_SAMPLE_LOG_SUCCESS("Client disconnected from IoT Hub.");
 
   return 0;
 }
 
+// create_and_configure_mqtt_client reads configuration variables from the environment,
+// makes calls to the Azure SDK for C for initial setup, and initiates an MQTT client
+// from Paho.
 static void create_and_configure_mqtt_client(void)
 {
   // Reads in environment variables set by user for purposes of running sample.
@@ -185,6 +185,8 @@ static void create_and_configure_mqtt_client(void)
   }
 }
 
+// connect_mqtt_client_to_iot_hub sets up basic security and MQTT topics and then
+// initiates an MQTT connection to Azure IoT Hub.
 static void connect_mqtt_client_to_iot_hub(void)
 {
   // Get the MQTT client username.
@@ -222,6 +224,8 @@ static void connect_mqtt_client_to_iot_hub(void)
   }
 }
 
+// subscribe_mqtt_client_to_iot_hub_topics subscribes to well-known MQTT topics that Azure IoT Hub
+// uses to signal incoming commands to the device and notify device of properties.
 static void subscribe_mqtt_client_to_iot_hub_topics(void)
 {
   // Messages received on the command topic will be commands to be invoked.
@@ -259,7 +263,8 @@ static void subscribe_mqtt_client_to_iot_hub_topics(void)
   }
 }
 
-static void initialize_components(void)
+// initialize_thermostat_components invokes the underlying pnp_thermostat_init routines.
+static void initialize_thermostat_components(void)
 {
   // Initialize thermostats 1 and 2.
   az_result rc = pnp_thermostat_init(&thermostat_1, thermostat_1_name, DEFAULT_START_TEMP_CELSIUS);
@@ -269,17 +274,21 @@ static void initialize_components(void)
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Failed to initialize Temperature Sensor 2");
 }
 
+// send_device_info invokes the underlying device info component to send the device's simulated information.
 static void send_device_info(void)
 {
-  // Build and send the device info reported property message.
   pnp_device_info_send_reported_properties(&hub_client, mqtt_client);
 }
 
+// send_serial_number invokes the temperature controller to send its simulated serial number property.
 static void send_serial_number(void)
 {
     pnp_temp_controller_send_serial_number(&hub_client, mqtt_client);
 }
 
+// request_all_properties sends a request to Azure IoT Hub to request all properties for
+// the device.  This call does not block.  Properties will be received on
+// a topic previously subscribed to (AZ_IOT_HUB_CLIENT_PROPERTIES_RESPONSE_SUBSCRIBE_TOPIC.)
 static void request_all_properties(void)
 {
   IOT_SAMPLE_LOG("Client requesting device property document from service.");
@@ -298,7 +307,10 @@ static void request_all_properties(void)
   IOT_SAMPLE_LOG(" "); // Formatting
 }
 
-static void receive_messages(void)
+// receive_messages_and_send_telemetry_loop will loop to check if there are incoming MQTT
+// messages, waiting up to MQTT_TIMEOUT_RECEIVE_MS.  It will also send a telemetry message
+// every time through the loop.
+static void receive_messages_and_send_telemetry_loop(void)
 {
   // Continue to receive commands or device property messages while device is operational.
   while (is_device_operational)
@@ -312,9 +324,11 @@ static void receive_messages(void)
   }
 }
 
+// disconnect_mqtt_client_from_iot_hub disconnects and destroys the underlying MQTT connection and
+// Paho handle.
 static void disconnect_mqtt_client_from_iot_hub(void)
 {
-  int rc = MQTTClient_disconnect(mqtt_client, PNP_MQTT_TIMEOUT_DISCONNECT_MS);
+  int rc = MQTTClient_disconnect(mqtt_client, MQTT_TIMEOUT_DISCONNECT_MS);
   if (rc != MQTTCLIENT_SUCCESS)
   {
     IOT_SAMPLE_LOG_ERROR("Failed to disconnect MQTT client: MQTTClient return code %d.", rc);
@@ -324,6 +338,7 @@ static void disconnect_mqtt_client_from_iot_hub(void)
   MQTTClient_destroy(&mqtt_client);
 }
 
+// receive_mqtt_message checks for incoming messages from Azure IoT Hub.
 static void receive_mqtt_message(void)
 {
   char* topic = NULL;
@@ -338,7 +353,7 @@ static void receive_mqtt_message(void)
   // MQTTCLIENT_TOPICNAME_TRUNCATED if the topic contains embedded NULL characters.
   // An error code is returned if there was a problem trying to receive a message.
   int rc = MQTTClient_receive(
-      mqtt_client, &topic, &topic_len, &receive_message, PNP_MQTT_TIMEOUT_RECEIVE_MS);
+      mqtt_client, &topic, &topic_len, &receive_message, MQTT_TIMEOUT_RECEIVE_MS);
   if ((rc != MQTTCLIENT_SUCCESS) && (rc != MQTTCLIENT_TOPICNAME_TRUNCATED))
   {
     IOT_SAMPLE_LOG_ERROR("Failed to receive message: MQTTClient return code %d.", rc);
@@ -347,11 +362,11 @@ static void receive_mqtt_message(void)
   else if (receive_message == NULL)
   {
     // Allow up to TIMEOUT_MQTT_RECEIVE_MAX_COUNT before disconnecting.
-    if (++timeout_counter >= PNP_MQTT_TIMEOUT_RECEIVE_MAX_MESSAGE_COUNT)
+    if (++timeout_counter >= MQTT_TIMEOUT_RECEIVE_MAX_MESSAGE_COUNT)
     {
       IOT_SAMPLE_LOG(
           "Receive message timeout expiration count of %d reached.",
-          PNP_MQTT_TIMEOUT_RECEIVE_MAX_MESSAGE_COUNT);
+          MQTT_TIMEOUT_RECEIVE_MAX_MESSAGE_COUNT);
       is_device_operational = false;
     }
   }
@@ -373,6 +388,7 @@ static void receive_mqtt_message(void)
   }
 }
 
+// on_message_received dispatches an MQTT message when the underlying MQTT stack provides one
 static void on_message_received(
     char* topic,
     int topic_len,
@@ -419,7 +435,8 @@ static void on_message_received(
   }
 }
 
-static void process_property_message(
+// process_device_property_message handles incoming properties from Azure IoT Hub.
+static void process_device_property_message(
     az_span property_message_span,
     az_iot_hub_client_properties_response_type response_type)
 {
@@ -444,28 +461,33 @@ static void process_property_message(
   rc = az_json_reader_init(&jr, property_message_span, NULL);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Could not initialize the json reader");
 
+  // Applications call az_iot_hub_client_properties_get_next_component_property to enumerate
+  // properties received.
   while (az_result_succeeded(
       rc = az_iot_hub_client_properties_get_next_component_property(
           &hub_client, &jr, response_type, AZ_IOT_HUB_CLIENT_PROPERTY_WRITEABLE, &component_name)))
   {
     if (rc == AZ_OK)
     {
+      // Once we have received a property, determine which component the property is intended for
+      // and route to the intended property component handler.  The component handler
+      // takes over from this point, for both parsing the request and responding to IoT Hub.
       if (az_span_is_content_equal(component_name, thermostat_1_name))
       {
         rc = pnp_thermostat_process_property_update(
-            &hub_client,
             &thermostat_1,
-            &jr,
+            &hub_client,
             mqtt_client,
+            &jr,
             version);
       }
       else if (az_span_is_content_equal(component_name, thermostat_2_name))
       {
         rc = pnp_thermostat_process_property_update(
-            &hub_client,
             &thermostat_2,
-            &jr,
+            &hub_client,
             mqtt_client,
+            &jr,
             version);
       }
       else
@@ -478,6 +500,9 @@ static void process_property_message(
         // but we do need to skip past the JSON part of the body to continue reading.
         IOT_SAMPLE_LOG_ERROR("Received property update for an unsupported component");
 
+        // Even though we don't process this message, we still need to advance the JSON reader
+        // so that az_iot_hub_client_properties_get_next_component_property is setup for its
+        // next invocation.
         IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_reader_next_token(&jr), log);
         IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_reader_next_token(&jr), log);
       }
@@ -490,6 +515,7 @@ static void process_property_message(
   }
 }
 
+// handle_device_property_message handles incoming properties from Azure IoT Hub.
 static void handle_device_property_message(
     MQTTClient_message const* receive_message,
     az_iot_hub_client_properties_response const* property_response)
@@ -503,14 +529,13 @@ static void handle_device_property_message(
     // A response from a property GET publish message with the property document as a payload.
     case AZ_IOT_HUB_CLIENT_PROPERTIES_RESPONSE_TYPE_GET:
       IOT_SAMPLE_LOG("Message Type: GET");
-      (void)process_property_message(message_span, property_response->response_type);
+      (void)process_device_property_message(message_span, property_response->response_type);
       break;
 
     // An update to the desired properties with the properties as a payload.
     case AZ_IOT_HUB_CLIENT_PROPERTIES_RESPONSE_TYPE_DESIRED_PROPERTIES:
       IOT_SAMPLE_LOG("Message Type: Desired Properties");
-      (void)process_property_message(message_span, property_response->response_type);
-
+      (void)process_device_property_message(message_span, property_response->response_type);
       break;
 
     // A response from a property reported properties publish message.
@@ -520,6 +545,7 @@ static void handle_device_property_message(
   }
 }
 
+// handle_command_request handles an incoming command from Azure IoT Hub
 static void handle_command_request(
     MQTTClient_message const* receive_message,
     az_iot_hub_client_command_request const* command_request)
@@ -528,7 +554,8 @@ static void handle_command_request(
       = az_span_create((uint8_t*)receive_message->payload, receive_message->payloadlen);
   az_iot_status status = AZ_IOT_STATUS_UNKNOWN;
 
-  // Invoke command and retrieve status and response payload to send to server.
+  // Once we have received the command, this function disptaches to the underlying command handler
+  // to parse the request and respond to Azure IoT Hub.
   if (az_span_size(command_request->component_name) == 0)
   {
     if (pnp_temp_controller_process_command_request(&hub_client, mqtt_client, command_request, message_span))
@@ -565,7 +592,9 @@ static void handle_command_request(
   }
   else
   {
-    IOT_SAMPLE_LOG_AZ_SPAN("Command not supported:", command_request->command_name);
+    // The request was sent to a component that this model does not support.  In this case the main
+    // handler sends a response to the server.
+    IOT_SAMPLE_LOG_AZ_SPAN("Requested command sent to unsupported component:", command_request->component_name);
     publish_message.out_payload = command_empty_response_payload;
     status = AZ_IOT_STATUS_NOT_FOUND;
 
@@ -589,6 +618,7 @@ static void handle_command_request(
   }
 }
 
+// send_telemetry_messages invokes those components that periodically send telemetry.
 static void send_telemetry_messages(void)
 {
   pnp_thermostat_send_telemetry_message(&thermostat_1, &hub_client, mqtt_client);

@@ -10,8 +10,8 @@
 /**
  * @brief Build the reported property payload to send for device info.
  *
- * @param[in] payload An #az_span with sufficient capacity to hold the reported property payload.
- * @param[out] out_payload A pointer to the #az_span containing the reported property payload.
+ * @param[in] hub_client An #az_iot_hub_client corresponding to this MQTT connection.
+ * @param[in] mqtt_client An mqtt_client corresponding to this MQTT connection.
  */
 void pnp_device_info_send_reported_properties(az_iot_hub_client* hub_client, MQTTClient mqtt_client);
 

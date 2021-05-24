@@ -1,6 +1,15 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // SPDX-License-Identifier: MIT
 
+/*
+ * The Temperature Controller component implements the properties, telemetry, and command declared in the model 
+ * defined in the DTDLv2 https://github.com/Azure/opendigitaltwins-dtdl/blob/master/DTDL/v2/samples/TemperatureController.json
+ * 
+ * This sample does not setup its own connection to Azure IoT Hub.  It is invoked by ../paho_iot_pnp_component_sample.c
+ * which handles connection management.
+ *
+*/
+
 #include <stddef.h>
 
 #include <azure/az_core.h>
@@ -8,8 +17,9 @@
 #include <azure/iot/az_iot_hub_client_properties.h>
 #include <iot_sample_common.h>
 
-#include "pnp_tempcontroller_component.h"
+#include "pnp_temp_controller_component.h"
 
+// Plug and Play command values
 static az_span const command_reboot_name = AZ_SPAN_LITERAL_FROM_STR("reboot");
 static az_span const command_empty_response_payload = AZ_SPAN_LITERAL_FROM_STR("{}");
 
@@ -41,8 +51,9 @@ bool pnp_temp_controller_process_command_request(
     publish_message.out_payload = command_empty_response_payload;
     status = AZ_IOT_STATUS_OK;
   }
-  else // Unsupported command
+  else 
   {
+    // Unsupported command
     IOT_SAMPLE_LOG_AZ_SPAN("Command not supported on Temperature Controller:", command_request->command_name);
     publish_message.out_payload = command_empty_response_payload;
     status = AZ_IOT_STATUS_NOT_FOUND;
@@ -68,8 +79,9 @@ bool pnp_temp_controller_process_command_request(
   return true;
 }
 
-
-static void temp_controller_build_serial_number_reported_property(
+// temp_controller_build_serial_number_property_payload builds the JSON payload for
+// the serial number property.
+static void temp_controller_build_serial_number_property_payload(
     az_span payload,
     az_span* out_payload)
 {
@@ -105,7 +117,7 @@ void pnp_temp_controller_send_serial_number(
     IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Failed to get the property PATCH topic");
     
     // Build the serial number reported property message.
-    temp_controller_build_serial_number_reported_property(
+    temp_controller_build_serial_number_property_payload(
         publish_message.payload, &publish_message.out_payload);
     
     // Publish the serial number reported property update.
@@ -119,8 +131,8 @@ void pnp_temp_controller_send_serial_number(
     IOT_SAMPLE_LOG(" "); // Formatting
 }
 
-
-static void temp_controller_build_telemetry_message(az_span payload, az_span* out_payload)
+// temp_controller_build_telemetry_message builds the JSON payload for the working set telemetry.
+static void temp_controller_build_working_set_payload(az_span payload, az_span* out_payload)
 {
   int32_t working_set_ram_in_kibibytes = rand() % 128;
 
@@ -148,8 +160,8 @@ void pnp_temp_controller_send_telemetry_message(az_iot_hub_client const* hub_cli
         hub_client, NULL, publish_message.topic, publish_message.topic_length, NULL);
     IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Unable to get the telemetry topic");
     
-    // Build the telemetry message.
-    temp_controller_build_telemetry_message(
+    // Build the telemetry message payload.
+    temp_controller_build_working_set_payload(
         publish_message.payload, &publish_message.out_payload);
     
     // Publish the telemetry message.
