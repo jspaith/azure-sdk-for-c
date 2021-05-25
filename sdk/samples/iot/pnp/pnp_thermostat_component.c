@@ -413,7 +413,7 @@ void pnp_thermostat_process_property_update(
           &property_name_and_value->token, property_desired_temperature_property_name))
   {
     // The requested property is not supported by this model.  We do NOT send any error
-    // response back to IoT Hub in this instance.  The function is responsible however 
+    // response back to IoT Hub in this instance.  The function is responsible however
     // for advancing the property JSON reader to set up the next property enumeration by the caller.
     IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_reader_next_token(property_name_and_value), log_message);
     IOT_SAMPLE_EXIT_IF_AZ_FAILED(
@@ -452,7 +452,7 @@ void pnp_thermostat_process_property_update(
     IOT_SAMPLE_LOG_SUCCESS("Client sent reported property message:");
     IOT_SAMPLE_LOG_AZ_SPAN("Payload:", publish_message.out_payload);
 
-    // Advance to the next JSON token so the caller is setup for its next property enumeration call.  
+    // Advance to the next JSON token so the caller is setup for its next property enumeration call.
     IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_reader_next_token(property_name_and_value), log_message);
   }
 

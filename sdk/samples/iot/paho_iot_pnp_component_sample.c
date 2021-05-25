@@ -17,8 +17,8 @@
  *
  * This sample is composed of multiple sub-components.  These are implemented in separate .c files:
  *   The temperature controller is the root component for this model.  It is implemented in
- * ./pnp/pnp_temperature_controller_component.c There are two separate simulated thermostats which are
- * modeled as "thermostat1" and "thermostat2".  It is implemented in
+ * ./pnp/pnp_temperature_controller_component.c There are two separate simulated thermostats which
+ * are modeled as "thermostat1" and "thermostat2".  It is implemented in
  * ./pnp/pnp_thermostat_component.c The device information component returns simulated device
  * information for this device.  It is implemented in ./pnp/pnp_device_info_component.c
  *
@@ -499,11 +499,13 @@ static void process_device_property_message(
       // takes over from this point, for both parsing the request and responding to IoT Hub.
       if (az_span_is_content_equal(component_name, thermostat_1_name))
       {
-        pnp_thermostat_process_property_update(&thermostat_1, &hub_client, mqtt_client, &jr, version);
+        pnp_thermostat_process_property_update(
+            &thermostat_1, &hub_client, mqtt_client, &jr, version);
       }
       else if (az_span_is_content_equal(component_name, thermostat_2_name))
       {
-        pnp_thermostat_process_property_update(&thermostat_2, &hub_client, mqtt_client, &jr, version);
+        pnp_thermostat_process_property_update(
+            &thermostat_2, &hub_client, mqtt_client, &jr, version);
       }
       else
       {
@@ -576,11 +578,13 @@ static void handle_command_request(
   }
   else if (az_span_is_content_equal(thermostat_1.component_name, command_request->component_name))
   {
-    pnp_thermostat_process_command_request(&thermostat_1, &hub_client, mqtt_client, command_request, message_span);
+    pnp_thermostat_process_command_request(
+        &thermostat_1, &hub_client, mqtt_client, command_request, message_span);
   }
   else if (az_span_is_content_equal(thermostat_2.component_name, command_request->component_name))
   {
-    pnp_thermostat_process_command_request(&thermostat_2, &hub_client, mqtt_client, command_request, message_span);
+    pnp_thermostat_process_command_request(
+        &thermostat_2, &hub_client, mqtt_client, command_request, message_span);
   }
   else
   {
