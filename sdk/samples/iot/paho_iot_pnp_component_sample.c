@@ -107,8 +107,6 @@ static void handle_command_request(
     az_iot_hub_client_command_request const* command_request);
 static void send_telemetry_messages(void);
 
-static az_result append_simple_json_token(az_json_writer* jw, az_json_token* json_token);
-
 int main(void)
 {
   create_and_configure_mqtt_client();
