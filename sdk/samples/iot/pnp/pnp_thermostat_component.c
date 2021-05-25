@@ -221,7 +221,8 @@ void pnp_thermostat_send_telemetry_message(
     MQTTClient mqtt_client)
 {
   pnp_mqtt_message publish_message;
-  pnp_mqtt_message_init(&publish_message);
+  IOT_SAMPLE_EXIT_IF_AZ_FAILED(
+      pnp_mqtt_message_init(&publish_message), "Failed to initialize pnp_mqtt_message");
 
   unsigned char properties_buffer[TEMPERATURE_PAYLOAD_BUFFER_SIZE];
   az_span properties_span = az_span_create(properties_buffer, sizeof(properties_buffer));
@@ -292,7 +293,8 @@ void pnp_thermostat_update_maximum_temperature_property(
     MQTTClient mqtt_client)
 {
   pnp_mqtt_message publish_message;
-  pnp_mqtt_message_init(&publish_message);
+  IOT_SAMPLE_EXIT_IF_AZ_FAILED(
+      pnp_mqtt_message_init(&publish_message), "Failed to initialize pnp_mqtt_message");
 
   // Get the property PATCH topic to send a reported property update.
   az_result rc = az_iot_hub_client_properties_patch_get_publish_topic(
@@ -393,7 +395,7 @@ static void pnp_thermostat_build_response_payload(
   *out_payload = az_json_writer_get_bytes_used_in_destination(&jw);
 }
 
-az_result pnp_thermostat_process_property_update(
+void pnp_thermostat_process_property_update(
     pnp_thermostat_component* thermostat_component,
     az_iot_hub_client const* hub_client,
     MQTTClient mqtt_client,
@@ -404,29 +406,35 @@ az_result pnp_thermostat_process_property_update(
   double targetTemperature = 0;
 
   pnp_mqtt_message publish_message;
-  pnp_mqtt_message_init(&publish_message);
+  IOT_SAMPLE_EXIT_IF_AZ_FAILED(
+      pnp_mqtt_message_init(&publish_message), "Failed to initialize pnp_mqtt_message");
 
   if (!az_json_token_is_text_equal(
           &property_name_and_value->token, property_desired_temperature_property_name))
   {
+    // The requested property is not supported by this model.  We do NOT send any error
+    // response back to IoT Hub in this instance.  The function is responsible however 
+    // for advancing the property JSON reader to set up the next property enumeration by the caller.
     IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_reader_next_token(property_name_and_value), log_message);
     IOT_SAMPLE_EXIT_IF_AZ_FAILED(
         az_json_reader_skip_children(property_name_and_value), log_message);
     IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_reader_next_token(property_name_and_value), log_message);
-    return false;
+    return;
   }
   else
   {
     // Azure IoT Hub has requested the targetTemperature be changed.
     IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_reader_next_token(property_name_and_value), log_message);
 
+    // Retrieve the actual targetTemperature from the JSON body.
     IOT_SAMPLE_EXIT_IF_AZ_FAILED(
         az_json_token_get_double(&property_name_and_value->token, &targetTemperature), log_message);
 
-    IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_reader_next_token(property_name_and_value), log_message);
-
+    // This simulates the device actually updating its properties.
     pnp_thermostat_update_device_temperature_property(thermostat_component, targetTemperature);
 
+    // Now that we have processed the targetTemperature update, we build a payload that acknowledges
+    // the device has successfully received it.
     pnp_thermostat_build_response_payload(
         hub_client,
         thermostat_component,
@@ -435,7 +443,7 @@ az_result pnp_thermostat_process_property_update(
         publish_message.payload,
         &publish_message.out_payload);
 
-    // Send response to the updated property.
+    // Send the response payload to the IoT hub.
     publish_mqtt_message(
         mqtt_client,
         publish_message.topic,
@@ -443,20 +451,22 @@ az_result pnp_thermostat_process_property_update(
         IOT_SAMPLE_MQTT_PUBLISH_QOS);
     IOT_SAMPLE_LOG_SUCCESS("Client sent reported property message:");
     IOT_SAMPLE_LOG_AZ_SPAN("Payload:", publish_message.out_payload);
+
+    // Advance to the next JSON token so the caller is setup for its next property enumeration call.  
+    IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_reader_next_token(property_name_and_value), log_message);
   }
 
   if (thermostat_component->send_maximum_temperature_property == true)
   {
-    // This is the highest temperature we've seen so far.  Update the service.
+    // This is the highest temperature we've seen so far.  The thermostat model defines
+    // a field named maxTempSinceLastReboot which we will update now.
     pnp_thermostat_update_maximum_temperature_property(
         thermostat_component, hub_client, mqtt_client);
     thermostat_component->send_maximum_temperature_property = false;
   }
-
-  return true;
 }
 
-bool pnp_thermostat_process_command_request(
+void pnp_thermostat_process_command_request(
     pnp_thermostat_component const* thermostat_component,
     az_iot_hub_client const* hub_client,
     MQTTClient mqtt_client,
@@ -464,7 +474,8 @@ bool pnp_thermostat_process_command_request(
     az_span command_received_payload)
 {
   pnp_mqtt_message publish_message;
-  pnp_mqtt_message_init(&publish_message);
+  IOT_SAMPLE_EXIT_IF_AZ_FAILED(
+      pnp_mqtt_message_init(&publish_message), "Failed to initialize pnp_mqtt_message");
 
   az_iot_status status;
 
@@ -516,6 +527,4 @@ bool pnp_thermostat_process_command_request(
   IOT_SAMPLE_LOG_SUCCESS("Client published command response.");
   IOT_SAMPLE_LOG("Status: %d", status);
   IOT_SAMPLE_LOG_AZ_SPAN("Payload:", publish_message.out_payload);
-
-  return true;
 }

@@ -79,7 +79,7 @@ void pnp_thermostat_update_maximum_temperature_property(
  * @return A boolean indicating if property was updated.
  * @retval True if property updated. False if property does not belong to thermostat component.
  */
-az_result pnp_thermostat_process_property_update(
+void pnp_thermostat_process_property_update(
     pnp_thermostat_component* thermostat_component,
     az_iot_hub_client const* hub_client,
     MQTTClient mqtt_client,
@@ -100,7 +100,7 @@ az_result pnp_thermostat_process_property_update(
  * @return A boolean indicating if command was successfully invoked.
  * @retval True if command successfully invoked. False if command failed to be invoked.
  */
-bool pnp_thermostat_process_command_request(
+void pnp_thermostat_process_command_request(
     pnp_thermostat_component const* thermostat_component,
     az_iot_hub_client const* hub_client,
     MQTTClient mqtt_client,

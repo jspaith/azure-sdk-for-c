@@ -17,7 +17,7 @@
  *
  * This sample is composed of multiple sub-components.  These are implemented in separate .c files:
  *   The temperature controller is the root component for this model.  It is implemented in
- * ./pnp/pnp_temp_controller_component.c There are two separate simulated thermostats which are
+ * ./pnp/pnp_temperature_controller_component.c There are two separate simulated thermostats which are
  * modeled as "thermostat1" and "thermostat2".  It is implemented in
  * ./pnp/pnp_thermostat_component.c The device information component returns simulated device
  * information for this device.  It is implemented in ./pnp/pnp_device_info_component.c
@@ -39,7 +39,7 @@
 #include "iot_sample_common.h"
 #include "pnp/pnp_device_info_component.h"
 #include "pnp/pnp_mqtt_message.h"
-#include "pnp/pnp_temp_controller_component.h"
+#include "pnp/pnp_temperature_controller_component.h"
 #include "pnp/pnp_thermostat_component.h"
 
 #define SAMPLE_TYPE PAHO_IOT_HUB
@@ -62,6 +62,10 @@ static pnp_thermostat_component thermostat_1;
 static pnp_thermostat_component thermostat_2;
 static az_span thermostat_1_name = AZ_SPAN_LITERAL_FROM_STR("thermostat1");
 static az_span thermostat_2_name = AZ_SPAN_LITERAL_FROM_STR("thermostat2");
+
+// All components that the model supports need to be declared to the az_iot_hub_client.
+// In general the az_iot_hub_client knows nothing about the model definition, leaving this entirely
+// to the application.  The component list is the only exception.
 static az_span pnp_device_components[] = { AZ_SPAN_LITERAL_FROM_STR("thermostat1"),
                                            AZ_SPAN_LITERAL_FROM_STR("thermostat2"),
                                            AZ_SPAN_LITERAL_FROM_STR("deviceInformation") };
@@ -164,7 +168,7 @@ static void create_and_configure_mqtt_client(void)
   iot_sample_create_mqtt_endpoint(
       SAMPLE_TYPE, &env_vars, mqtt_endpoint_buffer, sizeof(mqtt_endpoint_buffer));
 
-  // Initialize the pnp client with the connection options.
+  // Initialize the hub client with the connection options.
   az_iot_hub_client_options options = az_iot_hub_client_options_default();
   options.model_id = model_id;
   options.component_names = pnp_device_components;
@@ -295,7 +299,7 @@ static void send_device_info(void)
 // property.
 static void send_serial_number(void)
 {
-  pnp_temp_controller_send_serial_number(&hub_client, mqtt_client);
+  pnp_temperature_controller_send_serial_number(&hub_client, mqtt_client);
 }
 
 // send_maximum_temperature_since_last_reboot sends the maximum temperature since last reboot
@@ -495,13 +499,11 @@ static void process_device_property_message(
       // takes over from this point, for both parsing the request and responding to IoT Hub.
       if (az_span_is_content_equal(component_name, thermostat_1_name))
       {
-        rc = pnp_thermostat_process_property_update(
-            &thermostat_1, &hub_client, mqtt_client, &jr, version);
+        pnp_thermostat_process_property_update(&thermostat_1, &hub_client, mqtt_client, &jr, version);
       }
       else if (az_span_is_content_equal(component_name, thermostat_2_name))
       {
-        rc = pnp_thermostat_process_property_update(
-            &thermostat_2, &hub_client, mqtt_client, &jr, version);
+        pnp_thermostat_process_property_update(&thermostat_2, &hub_client, mqtt_client, &jr, version);
       }
       else
       {
@@ -509,13 +511,10 @@ static void process_device_property_message(
 
         // Only the thermostat component supports writeable properties;
         // the models for DeviceInfo and the temperature controller do not.
-        // We do NOT report back an error for an unknown property to IoT Hub,
-        // but we do need to skip past the JSON part of the body to continue reading.
         IOT_SAMPLE_LOG_ERROR("Received property update for an unsupported component");
 
-        // Even though we don't process this message, we still need to advance the JSON reader
-        // so that az_iot_hub_client_properties_get_next_component_property is setup for its
-        // next invocation.
+        // We do NOT report back an error for an unknown property to IoT Hub,
+        // but we do need to skip past the JSON part of the body to continue reading.
         IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_reader_next_token(&jr), log_message);
         IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_reader_skip_children(&jr), log_message);
         IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_reader_next_token(&jr), log_message);
@@ -572,31 +571,21 @@ static void handle_command_request(
   // to parse the request and respond to Azure IoT Hub.
   if (az_span_size(command_request->component_name) == 0)
   {
-    pnp_temp_controller_process_command_request(
+    pnp_temperature_controller_process_command_request(
         &hub_client, mqtt_client, command_request, message_span);
   }
   else if (az_span_is_content_equal(thermostat_1.component_name, command_request->component_name))
   {
-    if (pnp_thermostat_process_command_request(
-            &thermostat_1, &hub_client, mqtt_client, command_request, message_span))
-    {
-      IOT_SAMPLE_LOG_AZ_SPAN(
-          "Client invoked command on Temperature Sensor 1:", command_request->command_name);
-    }
+    pnp_thermostat_process_command_request(&thermostat_1, &hub_client, mqtt_client, command_request, message_span);
   }
   else if (az_span_is_content_equal(thermostat_2.component_name, command_request->component_name))
   {
-    if (pnp_thermostat_process_command_request(
-            &thermostat_2, &hub_client, mqtt_client, command_request, message_span))
-    {
-      IOT_SAMPLE_LOG_AZ_SPAN(
-          "Client invoked command on Temperature Sensor 1:", command_request->command_name);
-    }
+    pnp_thermostat_process_command_request(&thermostat_2, &hub_client, mqtt_client, command_request, message_span);
   }
   else
   {
     // The request was sent to a component that this model does not support.  In this case the main
-    // handler sends a response to the server.
+    // handler sends a 404 response to the server.
     IOT_SAMPLE_LOG_AZ_SPAN(
         "Requested command sent to unsupported component:", command_request->component_name);
     publish_message.out_payload = command_empty_response_payload;
@@ -629,5 +618,5 @@ static void send_telemetry_messages(void)
 {
   pnp_thermostat_send_telemetry_message(&thermostat_1, &hub_client, mqtt_client);
   pnp_thermostat_send_telemetry_message(&thermostat_2, &hub_client, mqtt_client);
-  pnp_temp_controller_send_telemetry_message(&hub_client, mqtt_client);
+  pnp_temperature_controller_send_telemetry_message(&hub_client, mqtt_client);
 }

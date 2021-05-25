@@ -18,7 +18,7 @@
 #include <azure/iot/az_iot_hub_client_properties.h>
 #include <iot_sample_common.h>
 
-#include "pnp_temp_controller_component.h"
+#include "pnp_temperature_controller_component.h"
 
 // Plug and Play command values
 static az_span const command_reboot_name = AZ_SPAN_LITERAL_FROM_STR("reboot");
@@ -32,7 +32,7 @@ static az_span const reported_property_serial_number_name
     = AZ_SPAN_LITERAL_FROM_STR("serialNumber");
 static az_span property_reported_serial_number_property_value = AZ_SPAN_LITERAL_FROM_STR("ABCDEFG");
 
-void pnp_temp_controller_process_command_request(
+void pnp_temperature_controller_process_command_request(
     az_iot_hub_client const* hub_client,
     MQTTClient mqtt_client,
     az_iot_hub_client_command_request const* command_request,
@@ -41,7 +41,8 @@ void pnp_temp_controller_process_command_request(
   (void)command_received_payload; // Not used
 
   pnp_mqtt_message publish_message;
-  pnp_mqtt_message_init(&publish_message);
+  IOT_SAMPLE_EXIT_IF_AZ_FAILED(
+      pnp_mqtt_message_init(&publish_message), "Failed to initialize pnp_mqtt_message");
 
   az_iot_status status;
 
@@ -101,12 +102,13 @@ static void temp_controller_build_serial_number_property_payload(
   *out_payload = az_json_writer_get_bytes_used_in_destination(&jw);
 }
 
-void pnp_temp_controller_send_serial_number(
+void pnp_temperature_controller_send_serial_number(
     az_iot_hub_client const* hub_client,
     MQTTClient mqtt_client)
 {
   pnp_mqtt_message publish_message;
-  pnp_mqtt_message_init(&publish_message);
+  IOT_SAMPLE_EXIT_IF_AZ_FAILED(
+      pnp_mqtt_message_init(&publish_message), "Failed to initialize pnp_mqtt_message");
 
   // Get the property PATCH topic to send a reported property update.
   az_result rc = az_iot_hub_client_properties_patch_get_publish_topic(
@@ -152,12 +154,13 @@ static void temp_controller_build_working_set_payload(az_span payload, az_span* 
   *out_payload = az_json_writer_get_bytes_used_in_destination(&jr);
 }
 
-void pnp_temp_controller_send_telemetry_message(
+void pnp_temperature_controller_send_telemetry_message(
     az_iot_hub_client const* hub_client,
     MQTTClient mqtt_client)
 {
   pnp_mqtt_message publish_message;
-  pnp_mqtt_message_init(&publish_message);
+  IOT_SAMPLE_EXIT_IF_AZ_FAILED(
+      pnp_mqtt_message_init(&publish_message), "Failed to initialize pnp_mqtt_message");
 
   // Get the telemetry topic to publish the telemetry message.
   az_result rc = az_iot_hub_client_telemetry_get_publish_topic(

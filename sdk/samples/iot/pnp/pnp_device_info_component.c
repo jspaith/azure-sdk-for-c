@@ -110,7 +110,8 @@ static void pnp_device_info_build_property_payload(
 void pnp_device_info_send_reported_properties(az_iot_hub_client* hub_client, MQTTClient mqtt_client)
 {
   pnp_mqtt_message publish_message;
-  pnp_mqtt_message_init(&publish_message);
+  IOT_SAMPLE_EXIT_IF_AZ_FAILED(
+      pnp_mqtt_message_init(&publish_message), "Failed to initialize pnp_mqtt_message");
 
   // Get the property PATCH topic to send a reported property update.
   az_result rc = az_iot_hub_client_properties_patch_get_publish_topic(
