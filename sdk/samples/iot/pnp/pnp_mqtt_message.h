@@ -52,7 +52,7 @@ az_span pnp_mqtt_get_request_id(void);
 
 /**
  * @brief Wrapper to publish an MQTT message.
- * 
+ *
  * @param[in] mqtt_client Pointer to connected MQTTClient handle to use to send message.
  * @param[in] topic MQTT topic string to send message on.
  * @param[in] payload An #az_span containing the payload.

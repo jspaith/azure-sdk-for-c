@@ -12,7 +12,7 @@
 
 #include "pnp_mqtt_message.h"
 
-// State associated with the current thermostat component.  
+// State associated with the current thermostat component.
 typedef struct
 {
   az_span component_name;
@@ -50,8 +50,8 @@ az_result pnp_thermostat_init(
  * @param[in] mqtt_client An MQTTClient corresponding to this MQTT connection.
  */
 void pnp_thermostat_send_telemetry_message(
-    pnp_thermostat_component* thermostat_component, 
-    az_iot_hub_client const* hub_client, 
+    pnp_thermostat_component* thermostat_component,
+    az_iot_hub_client const* hub_client,
     MQTTClient mqtt_client);
 
 /**
@@ -61,12 +61,13 @@ void pnp_thermostat_send_telemetry_message(
  * @param[in] mqtt_client An MQTTClient corresponding to this MQTT connection.
  */
 void pnp_thermostat_update_maximum_temperature_property(
-    pnp_thermostat_component* thermostat_component, 
-    az_iot_hub_client const* hub_client, 
+    pnp_thermostat_component* thermostat_component,
+    az_iot_hub_client const* hub_client,
     MQTTClient mqtt_client);
 
 /**
- * @brief Processes a property update intended for thermostat component.  Parses request, build response, and responds via MQTT.
+ * @brief Processes a property update intended for thermostat component.  Parses request, build
+ * response, and responds via MQTT.
  *
  * @param[in, out] thermostat_component A pointer to the themostat on which to invoke the command.
  * @param[in] hub_client An #az_iot_hub_client corresponding to this MQTT connection.
@@ -86,12 +87,14 @@ az_result pnp_thermostat_process_property_update(
     int32_t version);
 
 /**
- * @brief Processes a command intended for the thermostat component.  Parses request, builds response, and responds via MQTT.
+ * @brief Processes a command intended for the thermostat component.  Parses request, builds
+ * response, and responds via MQTT.
  *
  * @param[in] thermostat_component A pointer to the themostat on which to invoke the command.
  * @param[in] hub_client An #az_iot_hub_client corresponding to this MQTT connection.
  * @param[in] mqtt_client An MQTTClient corresponding to this MQTT connection.
- * @param[in] command_request The #az_iot_hub_client_command_request that contains information about the requested command.
+ * @param[in] command_request The #az_iot_hub_client_command_request that contains information about
+ * the requested command.
  * @param[in] command_received_payload An #az_span with the payload of the command.
  *
  * @return A boolean indicating if command was successfully invoked.

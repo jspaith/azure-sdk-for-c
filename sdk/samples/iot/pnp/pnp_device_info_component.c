@@ -3,12 +3,13 @@
 
 /*
  * The Device Info component is a sample that sends (simulated) device information.
- * It implements the model defined in the DTDLv2 https://devicemodels.azure.com/dtmi/azure/devicemanagement/deviceinformation-1.json.
- * 
- * This sample does not setup its own connection to Azure IoT Hub.  It is invoked by ../paho_iot_pnp_component_sample.c
- * which handles connection management.
+ * It implements the model defined in the DTDLv2
+ * https://devicemodels.azure.com/dtmi/azure/devicemanagement/deviceinformation-1.json.
  *
-*/
+ * This sample does not setup its own connection to Azure IoT Hub.  It is invoked by
+ * ../paho_iot_pnp_component_sample.c which handles connection management.
+ *
+ */
 
 #include <stddef.h>
 
@@ -47,7 +48,10 @@ static double const total_memory_property_value = 128;
 
 // pnp_device_info_build_property_payload builds the JSON payload that contains simulated
 // device information.
-static void pnp_device_info_build_property_payload(az_iot_hub_client* hub_client, az_span payload, az_span* out_payload)
+static void pnp_device_info_build_property_payload(
+    az_iot_hub_client* hub_client,
+    az_span payload,
+    az_span* out_payload)
 {
   char const* const log_message = "Failed to build reported property payload for device info";
 
@@ -62,16 +66,20 @@ static void pnp_device_info_build_property_payload(az_iot_hub_client* hub_client
 
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(
       az_json_writer_append_property_name(&jw, manufacturer_property_name), log_message);
-  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_string(&jw, manufacturer_property_value), log_message);
-  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_property_name(&jw, model_property_name), log_message);
-  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_string(&jw, model_property_value), log_message);
+  IOT_SAMPLE_EXIT_IF_AZ_FAILED(
+      az_json_writer_append_string(&jw, manufacturer_property_value), log_message);
+  IOT_SAMPLE_EXIT_IF_AZ_FAILED(
+      az_json_writer_append_property_name(&jw, model_property_name), log_message);
+  IOT_SAMPLE_EXIT_IF_AZ_FAILED(
+      az_json_writer_append_string(&jw, model_property_value), log_message);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(
       az_json_writer_append_property_name(&jw, software_version_property_name), log_message);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(
       az_json_writer_append_string(&jw, software_version_property_value), log_message);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(
       az_json_writer_append_property_name(&jw, os_name_property_name), log_message);
-  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_string(&jw, os_name_property_value), log_message);
+  IOT_SAMPLE_EXIT_IF_AZ_FAILED(
+      az_json_writer_append_string(&jw, os_name_property_value), log_message);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(
       az_json_writer_append_property_name(&jw, processor_architecture_property_name), log_message);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(
@@ -92,7 +100,8 @@ static void pnp_device_info_build_property_payload(az_iot_hub_client* hub_client
       log_message);
 
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-      az_iot_hub_client_properties_builder_end_component((az_iot_hub_client const*)0x1, &jw), log_message);
+      az_iot_hub_client_properties_builder_end_component((az_iot_hub_client const*)0x1, &jw),
+      log_message);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_end_object(&jw), log_message);
 
   *out_payload = az_json_writer_get_bytes_used_in_destination(&jw);
@@ -113,7 +122,8 @@ void pnp_device_info_send_reported_properties(az_iot_hub_client* hub_client, MQT
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Failed to get the property PATCH topic");
 
   // Get the payload to send
-  pnp_device_info_build_property_payload(hub_client, publish_message.payload, &publish_message.out_payload);
+  pnp_device_info_build_property_payload(
+      hub_client, publish_message.payload, &publish_message.out_payload);
 
   // Publish the device info reported property update.
   publish_mqtt_message(

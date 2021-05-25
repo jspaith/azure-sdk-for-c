@@ -2,13 +2,14 @@
 // SPDX-License-Identifier: MIT
 
 /*
- * The Temperature Controller component implements the properties, telemetry, and command declared in the model 
- * defined in the DTDLv2 https://github.com/Azure/opendigitaltwins-dtdl/blob/master/DTDL/v2/samples/TemperatureController.json
- * 
- * This sample does not setup its own connection to Azure IoT Hub.  It is invoked by ../paho_iot_pnp_component_sample.c
- * which handles connection management.
+ * The Temperature Controller component implements the properties, telemetry, and command declared
+ * in the model defined in the DTDLv2
+ * https://github.com/Azure/opendigitaltwins-dtdl/blob/master/DTDL/v2/samples/TemperatureController.json
  *
-*/
+ * This sample does not setup its own connection to Azure IoT Hub.  It is invoked by
+ * ../paho_iot_pnp_component_sample.c which handles connection management.
+ *
+ */
 
 #include <stddef.h>
 
@@ -51,10 +52,11 @@ void pnp_temp_controller_process_command_request(
     publish_message.out_payload = command_empty_response_payload;
     status = AZ_IOT_STATUS_OK;
   }
-  else 
+  else
   {
     // Unsupported command
-    IOT_SAMPLE_LOG_AZ_SPAN("Command not supported on Temperature Controller:", command_request->command_name);
+    IOT_SAMPLE_LOG_AZ_SPAN(
+        "Command not supported on Temperature Controller:", command_request->command_name);
     publish_message.out_payload = command_empty_response_payload;
     status = AZ_IOT_STATUS_NOT_FOUND;
   }
@@ -92,7 +94,8 @@ static void temp_controller_build_serial_number_property_payload(
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(
       az_json_writer_append_property_name(&jw, reported_property_serial_number_name), log_message);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(
-      az_json_writer_append_string(&jw, property_reported_serial_number_property_value), log_message);
+      az_json_writer_append_string(&jw, property_reported_serial_number_property_value),
+      log_message);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_end_object(&jw), log_message);
 
   *out_payload = az_json_writer_get_bytes_used_in_destination(&jw);
@@ -102,31 +105,31 @@ void pnp_temp_controller_send_serial_number(
     az_iot_hub_client const* hub_client,
     MQTTClient mqtt_client)
 {
-    pnp_mqtt_message publish_message;
-    pnp_mqtt_message_init(&publish_message);
+  pnp_mqtt_message publish_message;
+  pnp_mqtt_message_init(&publish_message);
 
-    // Get the property PATCH topic to send a reported property update.
-    az_result rc = az_iot_hub_client_properties_patch_get_publish_topic(
-        hub_client,
-        pnp_mqtt_get_request_id(),
-        publish_message.topic,
-        publish_message.topic_length,
-        NULL);
-    IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Failed to get the property PATCH topic");
-    
-    // Build the serial number reported property message.
-    temp_controller_build_serial_number_property_payload(
-        publish_message.payload, &publish_message.out_payload);
-    
-    // Publish the serial number reported property update.
-    publish_mqtt_message(
-        mqtt_client, publish_message.topic, publish_message.out_payload, IOT_SAMPLE_MQTT_PUBLISH_QOS);
-    IOT_SAMPLE_LOG_SUCCESS(
-        "Client sent `%.*s` reported property message.",
-        az_span_size(reported_property_serial_number_name),
-        az_span_ptr(reported_property_serial_number_name));
-    IOT_SAMPLE_LOG_AZ_SPAN("Payload:", publish_message.out_payload);
-    IOT_SAMPLE_LOG(" "); // Formatting
+  // Get the property PATCH topic to send a reported property update.
+  az_result rc = az_iot_hub_client_properties_patch_get_publish_topic(
+      hub_client,
+      pnp_mqtt_get_request_id(),
+      publish_message.topic,
+      publish_message.topic_length,
+      NULL);
+  IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Failed to get the property PATCH topic");
+
+  // Build the serial number reported property message.
+  temp_controller_build_serial_number_property_payload(
+      publish_message.payload, &publish_message.out_payload);
+
+  // Publish the serial number reported property update.
+  publish_mqtt_message(
+      mqtt_client, publish_message.topic, publish_message.out_payload, IOT_SAMPLE_MQTT_PUBLISH_QOS);
+  IOT_SAMPLE_LOG_SUCCESS(
+      "Client sent `%.*s` reported property message.",
+      az_span_size(reported_property_serial_number_name),
+      az_span_ptr(reported_property_serial_number_name));
+  IOT_SAMPLE_LOG_AZ_SPAN("Payload:", publish_message.out_payload);
+  IOT_SAMPLE_LOG(" "); // Formatting
 }
 
 // temp_controller_build_telemetry_message builds the JSON payload for the working set telemetry.
@@ -142,30 +145,31 @@ static void temp_controller_build_working_set_payload(az_span payload, az_span* 
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_begin_object(&jr), log_message);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(
       az_json_writer_append_property_name(&jr, telemetry_working_set_name), log_message);
-  IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_int32(&jr, working_set_ram_in_kibibytes), log_message);
+  IOT_SAMPLE_EXIT_IF_AZ_FAILED(
+      az_json_writer_append_int32(&jr, working_set_ram_in_kibibytes), log_message);
   IOT_SAMPLE_EXIT_IF_AZ_FAILED(az_json_writer_append_end_object(&jr), log_message);
 
   *out_payload = az_json_writer_get_bytes_used_in_destination(&jr);
 }
 
-void pnp_temp_controller_send_telemetry_message(az_iot_hub_client const* hub_client, MQTTClient mqtt_client)
+void pnp_temp_controller_send_telemetry_message(
+    az_iot_hub_client const* hub_client,
+    MQTTClient mqtt_client)
 {
-    pnp_mqtt_message publish_message;
-    pnp_mqtt_message_init(&publish_message);
+  pnp_mqtt_message publish_message;
+  pnp_mqtt_message_init(&publish_message);
 
-    // Get the telemetry topic to publish the telemetry message.
-    az_result rc = az_iot_hub_client_telemetry_get_publish_topic(
-        hub_client, NULL, publish_message.topic, publish_message.topic_length, NULL);
-    IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Unable to get the telemetry topic");
-    
-    // Build the telemetry message payload.
-    temp_controller_build_working_set_payload(
-        publish_message.payload, &publish_message.out_payload);
-    
-    // Publish the telemetry message.
-    publish_mqtt_message(
-        mqtt_client, publish_message.topic, publish_message.out_payload, IOT_SAMPLE_MQTT_PUBLISH_QOS);
-    IOT_SAMPLE_LOG_SUCCESS("Client published the telemetry message for Temperature Controller.");
-    IOT_SAMPLE_LOG_AZ_SPAN("Payload:", publish_message.out_payload);
+  // Get the telemetry topic to publish the telemetry message.
+  az_result rc = az_iot_hub_client_telemetry_get_publish_topic(
+      hub_client, NULL, publish_message.topic, publish_message.topic_length, NULL);
+  IOT_SAMPLE_EXIT_IF_AZ_FAILED(rc, "Unable to get the telemetry topic");
+
+  // Build the telemetry message payload.
+  temp_controller_build_working_set_payload(publish_message.payload, &publish_message.out_payload);
+
+  // Publish the telemetry message.
+  publish_mqtt_message(
+      mqtt_client, publish_message.topic, publish_message.out_payload, IOT_SAMPLE_MQTT_PUBLISH_QOS);
+  IOT_SAMPLE_LOG_SUCCESS("Client published the telemetry message for Temperature Controller.");
+  IOT_SAMPLE_LOG_AZ_SPAN("Payload:", publish_message.out_payload);
 }
-

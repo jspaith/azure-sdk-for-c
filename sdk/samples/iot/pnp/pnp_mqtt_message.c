@@ -59,4 +59,3 @@ void publish_mqtt_message(MQTTClient mqtt_client, char const* topic, az_span pay
     exit(rc);
   }
 }
-
