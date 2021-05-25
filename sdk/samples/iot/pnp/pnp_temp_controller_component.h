@@ -44,7 +44,7 @@ void pnp_temperature_controller_send_serial_number(
     az_iot_hub_client const* hub_client,
     MQTTClient mqtt_client);
 
-void pnp_temperature_controller_send_telemetry_message(
+void pnp_temperature_controller_send_workingset(
     az_iot_hub_client const* hub_client,
     MQTTClient mqtt_client);
 

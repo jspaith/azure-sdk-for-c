@@ -154,7 +154,7 @@ static void temp_controller_build_working_set_payload(az_span payload, az_span* 
   *out_payload = az_json_writer_get_bytes_used_in_destination(&jr);
 }
 
-void pnp_temperature_controller_send_telemetry_message(
+void pnp_temperature_controller_send_workingset(
     az_iot_hub_client const* hub_client,
     MQTTClient mqtt_client)
 {

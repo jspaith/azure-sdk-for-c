@@ -622,5 +622,5 @@ static void send_telemetry_messages(void)
 {
   pnp_thermostat_send_telemetry_message(&thermostat_1, &hub_client, mqtt_client);
   pnp_thermostat_send_telemetry_message(&thermostat_2, &hub_client, mqtt_client);
-  pnp_temperature_controller_send_telemetry_message(&hub_client, mqtt_client);
+  pnp_temperature_controller_send_workingset(&hub_client, mqtt_client);
 }

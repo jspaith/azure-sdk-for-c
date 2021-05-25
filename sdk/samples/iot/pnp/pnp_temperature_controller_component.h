@@ -44,7 +44,16 @@ void pnp_temperature_controller_send_serial_number(
     az_iot_hub_client const* hub_client,
     MQTTClient mqtt_client);
 
-void pnp_temperature_controller_send_telemetry_message(
+/**
+ * @brief Sends the simulated workingSet via telemetry.
+ *
+ * @param[in] hub_client An #az_iot_hub_client
+ * corresponding to this MQTT connection.
+ * @param[in] mqtt_client An MQTTClient corresponding to
+ * this MQTT connection.
+ *
+ */
+void pnp_temperature_controller_send_workingset(
     az_iot_hub_client const* hub_client,
     MQTTClient mqtt_client);
 
